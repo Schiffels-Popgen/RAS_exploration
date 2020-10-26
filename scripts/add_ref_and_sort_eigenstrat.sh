@@ -29,10 +29,13 @@ for var_set in "all_vars" "common_vars"; do
 
     ## Sort the .snp file. Keep genotype order in geno as well. They tend to already be sorted, but sometimes that doesnt seem to be the case, so best to be safe.
     paste -d " "   ${input_dir}/${var_set}_m${four_mN}_chr${chrom_name}.snp ${input_dir}/${var_set}_m${four_mN}_chr${chrom_name}.geno | sort -nk4 >${input_dir}/temp_${var_set}_m${four_mN}_chr${chrom_name}.snpgeno
-    cut -d " " -f1 ${input_dir}/temp_${var_set}_m${four_mN}_chr${chrom_name}.snpgeno >${input_dir}/${var_set}_m${four_mN}_chr${chrom_name}.snp2
-    cut -d " " -f2 ${input_dir}/temp_${var_set}_m${four_mN}_chr${chrom_name}.snpgeno >${input_dir}/${var_set}_m${four_mN}_chr${chrom_name}.geno2
+    cut -d " " -f1 ${input_dir}/temp_${var_set}_m${four_mN}_chr${chrom_name}.snpgeno >${input_dir}/${var_set}_m${four_mN}_chr${chrom_name}.snp
+    cut -d " " -f2 ${input_dir}/temp_${var_set}_m${four_mN}_chr${chrom_name}.snpgeno >${input_dir}/${var_set}_m${four_mN}_chr${chrom_name}.geno
     ## Remove temp snpgeno file.
     rm ${input_dir}/temp_${var_set}_m${four_mN}_chr${chrom_name}.snpgeno
     
     ### For small chromosome lengths (i.e. during basic testing) sometimes two snps will get rounded to the same position, and sorting will swap around the order of genotypes randomly. Remains to be seen if this still occurrs when the lengths are larger. This happens because msprime gives unique float positions to sites, and these need to be rounded up to make them bp positions.
 done
+
+## Also gzip the freqsum file
+gzip ${input_dir}/rare_vars_m${four_mN}_chr${chrom_name}.freqsum
