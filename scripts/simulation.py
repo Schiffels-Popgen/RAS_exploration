@@ -58,18 +58,19 @@ parser.add_argument("-c", type = float, metavar = "chrom_length", required = Fal
 parser.add_argument("-n", type = int, metavar = "chrom_name", required = False, default=1, help = "The name of the simulated chromosome. Also functions as the random seed for the simulation.")
 parser.add_argument("-s", type = int, metavar = "sample_size", required = False, default=20, help = "The number of samples in each of the four sub-populations.")
 parser.add_argument("-m", type = float, metavar = "four_mN", required = False, default=1.0, help = "The scaled per-generation migration rate.")
-parser.add_argument("-o", type = str, metavar = "out_dir", required = False, default="/projects1/MICROSCOPE/rarevar_sim_study/data", help = "The desired output directory within which the freqsum- and eigenstrat-formatted variants will be saved.")
+# parser.add_argument("-o", type = str, metavar = "out_dir", required = False, default="/projects1/MICROSCOPE/rarevar_sim_study/data", help = "The desired output directory within which the freqsum- and eigenstrat-formatted variants will be saved.")
 args = parser.parse_args()
 
-out_base_dir=args.o
+# out_base_dir=args.o
 four_mN=args.m
 sample_sizes=[args.s for _ in range(9)] ## Equal sample sizes for each of the populations.
 chrom_name=args.n
 chrom_length=args.c
 
-outdir=out_base_dir+"/{}/{}/".format(np.format_float_scientific(chrom_length, exp_digits=1, trim='-'), four_mN)
+# outdir=out_base_dir+"/{}/{}/".format(np.format_float_scientific(chrom_length, exp_digits=1, trim='-'), four_mN)
+outdir='./'
 
-os.makedirs(outdir, exist_ok=True)
+# os.makedirs(outdir, exist_ok=True)
 
 
 #### SIMULATE DATA ####

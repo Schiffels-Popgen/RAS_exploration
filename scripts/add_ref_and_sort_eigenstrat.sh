@@ -5,13 +5,13 @@ if [[ ${1} == "-h" || ${1} == "--help" || ${1} == '' ]]; then
   echo "  create an ungrouped ind file for that dataset (.indEach), and sort the genotype and snp files by variant chromosome position." 
   echo ''
   echo "Usage:"
-  echo "    $0 chrom_name input_dir"
+  echo "    $0 chrom_name four_mN input_dir"
   exit 0
 fi
 
 chrom_name=$1
-input_dir=$2
-four_mN=$(echo ${2%/} | rev | cut -f 1 -d "/" | rev) ## Infer four_mN from input dir
+four_mN=$2
+input_dir=$3
 
 
 for var_set in "all_vars" "common_vars"; do
