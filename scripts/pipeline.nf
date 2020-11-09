@@ -52,14 +52,16 @@ process msprime{
   val chrom_name from Channel.of(1..20)
   
   output:
-  path("all_vars_m${params.four_mN}_chr${chrom_name}.geno") into ch_all_vars_geno_for_f3
-  path("all_vars_m${params.four_mN}_chr${chrom_name}.snp") into ch_all_vars_snp_for_f3
-  path("all_vars_m${params.four_mN}_chr${chrom_name}.ind") into ch_all_vars_ind_for_f3
-  path("all_vars_m${params.four_mN}_chr${chrom_name}.indEach") into ch_all_vars_indEach_for_f3
-  path("common_vars_m${params.four_mN}_chr${chrom_name}.geno") into (ch_common_vars_geno_for_f3, ch_common_vars_geno_for_1240k )
-  path("common_vars_m${params.four_mN}_chr${chrom_name}.snp") into (ch_common_vars_snp_for_f3, ch_common_vars_snp_for_1240k )
-  path("common_vars_m${params.four_mN}_chr${chrom_name}.ind") into (ch_common_vars_ind_for_f3, ch_common_vars_ind_for_1240k )
-  path("common_vars_m${params.four_mN}_chr${chrom_name}.indEach") into (ch_common_vars_indEach_for_f3, ch_common_vars_indEach_for_1240k )
+  tuple val(chrom_name), val("all"), path("all_vars_m${params.four_mN}_chr${chrom_name}.geno"), path("all_vars_m${params.four_mN}_chr${chrom_name}.snp"), path("all_vars_m${params.four_mN}_chr${chrom_name}.ind"), path("all_vars_m${params.four_mN}_chr${chrom_name}.indEach") into (ch_all_vars_datasets)
+  tuple val(chrom_name), val("common"), path("common_vars_m${params.four_mN}_chr${chrom_name}.geno"), path("common_vars_m${params.four_mN}_chr${chrom_name}.snp"), path("common_vars_m${params.four_mN}_chr${chrom_name}.ind"), path("common_vars_m${params.four_mN}_chr${chrom_name}.indEach") into (ch_common_vars_datasets, ch_for_1240k_input_geno, ch_for_1240k_input_snp, ch_for_1240k_input_ind, ch_for_1240k_input_indEach)
+/*  tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.geno") into ch_all_vars_geno_for_f3
+  tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.snp") into ch_all_vars_snp_for_f3
+  tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.ind") into ch_all_vars_ind_for_f3
+  tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.indEach") into ch_all_vars_indEach_for_f3
+  tuple val(chrom_name), path("common_vars_m${params.four_mN}_chr${chrom_name}.geno") into (ch_common_vars_geno_for_f3, ch_common_vars_geno_for_1240k )
+  tuple val(chrom_name), path("common_vars_m${params.four_mN}_chr${chrom_name}.snp") into (ch_common_vars_snp_for_f3, ch_common_vars_snp_for_1240k )
+  tuple val(chrom_name), path("common_vars_m${params.four_mN}_chr${chrom_name}.ind") into (ch_common_vars_ind_for_f3, ch_common_vars_ind_for_1240k )
+  tuple val(chrom_name), path("common_vars_m${params.four_mN}_chr${chrom_name}.indEach") into (ch_common_vars_indEach_for_f3, ch_common_vars_indEach_for_1240k )*/
   path("variant_counts.m${params.four_mN}_chr${chrom_name}.txt") 
   
   script:
@@ -68,6 +70,14 @@ process msprime{
   /projects1/MICROSCOPE/rarevar_sim_study/scripts/add_ref_and_sort_eigenstrat.sh ${chrom_name} ${params.four_mN} .
   """
 }
+
+/*
+Collect and filter the 1240k making input into 4 subchannels
+*/
+ch_common_vars_geno_for_1240k=ch_for_1240k_input_geno.map{ it[2] }
+ch_common_vars_snp_for_1240k=ch_for_1240k_input_snp.map{ it[3] }
+ch_common_vars_ind_for_1240k=ch_for_1240k_input_ind.map{ it[4] }
+ch_common_vars_indEach_for_1240k=ch_for_1240k_input_indEach.map{ it[5] }
 
 
 process make_1240k{
@@ -82,12 +92,9 @@ process make_1240k{
   path snps from ch_common_vars_snp_for_1240k.collect()
   path inds from ch_common_vars_ind_for_1240k.collect()
   path indEachs from ch_common_vars_indEach_for_1240k.collect()
-  
+
   output:
-  path("twelve_forty_vars_m${params.four_mN}.geno") into ch_twelve_forty_vars_geno_for_f3
-  path("twelve_forty_vars_m${params.four_mN}.snp") into ch_twelve_forty_vars_snp_for_f3
-  path("twelve_forty_vars_m${params.four_mN}.ind") into ch_twelve_forty_vars_ind_for_f3
-  path("twelve_forty_vars_m${params.four_mN}.indEach") into ch_twelve_forty_vars_indEach_for_f3
+  tuple val("1:20"),val("1240k"),path("twelve_forty_vars_m${params.four_mN}.geno"),path("twelve_forty_vars_m${params.four_mN}.snp"),path("twelve_forty_vars_m${params.four_mN}.ind"),path("twelve_forty_vars_m${params.four_mN}.indEach") into ch_twelve_forty_vars_datasets
 
   script:
   """
@@ -97,24 +104,23 @@ process make_1240k{
     cat common_vars_m${params.four_mN}_chr\${chrom_name}.snp  >> concat_snps
   done
   
-  ## Then paste side by side, use shuf to randomly subsample 1200K sites
-  paste -d " " concat_snps concat_genos | cat -n | shuf -n 1200000 | sort -nk1 >banana.txt
+  ## Then paste side by side, use shuf to randomly subsample 1200K sites, sort by original line numbers, and remove leading spaces (added by cat -n)
+  paste -d " " concat_snps concat_genos | cat -n | shuf -n 1200000 | sort -nk1 | sed -e 's/^[ ]*//' >banana.txt
   
   ## Extract the .snp and .geno file from the subsample. 
-  cut -f 2-7 -d " " banana.txt >twelve_forty_vars_m${params.four_mN}.snp
-  cut -f 8 -d " " banana.txt >twelve_forty_vars_m${params.four_mN}.geno
+  cut -f 1 -d " " banana.txt | cut -f 2- >twelve_forty_vars_m${params.four_mN}.snp
+  cut -f 2 -d " " banana.txt >twelve_forty_vars_m${params.four_mN}.geno
   
   ## Copy the original ind files 
   cp ${inds[0]} twelve_forty_vars_m${params.four_mN}.ind
   cp ${indEachs[0]} twelve_forty_vars_m${params.four_mN}.indEach
   """
-
 }
 
 process make_poplists {
 
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "/projects1/MICROSCOPE/rarevar_sim_study/results/f3/poplists", mode: 'copy'
+  publishDir "/projects1/MICROSCOPE/rarevar_sim_study/results/f3/${params.chrom_length}/${params.four_mN}/poplists", mode: 'copy'
   queue "short"
   memory '1GB'
 
@@ -147,17 +153,65 @@ process make_poplists {
   """
 }
 
-/*process f3 {
-  tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "/projects1/MICROSCOPE/rarevar_sim_study/results/f3/poplists", mode: 'copy'
+/*
+  Concatenate channels of eigenstrat inputs by input type, then transpose to make into tables with 1 chromosome per row.
+  Map to indicate the geno, ind, snp file.
+  Then combine with poplists to make all possible pairs of inputs and poplists.
+  These pairs will be used to submit f3 jobs for each chunk and variant type.
+*/
+
+ch_f3_input = ch_all_vars_datasets
+                    .mix(ch_common_vars_datasets, ch_twelve_forty_vars_datasets)
+                    .spread(ch_pairwise_poplists_f3)
+
+process f3 {
+  conda 'bioconda::admixtools=6.0'
+  tag "${variant_set}_chr${chrom_name}_m${params.four_mN}_l${params.chrom_length}"
+  publishDir "/projects1/MICROSCOPE/rarevar_sim_study/results/f3/${params.chrom_length}/${params.four_mN}", mode: 'copy'
   queue "short"
   memory '8GB'
 
   input:
-    path("pairwise_poplist.*") into ch_pairwise_poplists_f3.collect()
-
+  tuple chrom_name, variant_set, path(geno), path(snp), path(ind), path(indEach), path(poplist) from ch_f3_input
 
   output:
+  tuple chrom_name, variant_set, path('*.out') into ch_f3_output
 
-}*/
-/*ch_all_vars_for_tweaking.view()*/
+  script:
+  """
+  lineNr=\$(basename ${poplist} .txt | rev | cut -f1 -d '.' | rev)
+  ## Make Parfile
+  (echo -e "genotypename:\t${geno}"
+  echo -e "snpname:\t${snp}"
+  echo -e "indivname:\t${indEach}"
+  echo -e "popfilename:\t${poplist}"
+  echo -e "outgroupmode:\tYES"
+  ) >parfile_f3.txt
+  
+  qp3Pop -p parfile_f3.txt >\$(basename ${geno} .geno).\$lineNr.out
+  """
+}
+
+/* Group the f3_output channel by snp_set, so that one job is ran per variant set, and it contains all the output files associated with that variant set."*/
+ch_f3_output
+        .groupTuple(by: 1)
+        .set{ ch_for_f3_matrix_generation }
+
+
+process compile_F3_matrix {
+  tag "${variant_set}_f3_matrix"
+  publishDir "/projects1/MICROSCOPE/rarevar_sim_study/results/f3/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
+  queue "short"
+  memory '8GB'
+
+  input:
+  tuple chrom_name, variant_set, path(f3_logs) from ch_for_f3_matrix_generation
+
+  output:
+  path("${variant_set}_similarity_matrix.txt")
+
+  script:
+  """
+  /projects1/MICROSCOPE/rarevar_sim_study/scripts/f3_to_distance_matrix.py ${params.n_ind_per_pop} ${variant_set}_similarity_matrix.txt ${f3_logs}
+  """
+}
