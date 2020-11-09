@@ -119,13 +119,14 @@ process make_poplists {
   memory '1GB'
 
   output:
-  path("pairwise_poplist.*") into ch_pairwise_poplists_f3
+  path("pairwise_poplist.*.txt") into ch_pairwise_poplists_f3
+  file("pairwise_poplist.txt")
 
   script:
   num_inds = params.n_ind_per_pop * 9 - 1
 
-  // 16110 (lines in poplist) divided by 1790 (average lines of 10 individuals) = 9(jobs)
-  lines_per_job = 1790
+  // 1500 lines per job.
+  lines_per_job = 1500
   """
   ## Create overall poplist
   for i in \$(seq 0 1 ${num_inds}); do
@@ -135,10 +136,13 @@ process make_poplists {
     done
   done >pairwise_poplist.txt
 
-  ## Split into 9 chunks for faster processing
-  for x in {1..9}; do
-    last_line=\$(expr \${x} \\* ${lines_per_job})
-    head -n \${last_line} pairwise_poplist.txt | tail -n ${lines_per_job} > pairwise_poplist.\${x}.txt
+  ## Split into chunks for paralellisation
+  let all_lines=\$(wc -l pairwise_poplist.txt | cut -d " " -f 1)
+  let start_line=1
+  while [[ \${start_line} -lt \${all_lines} ]]; do
+    let end_line=\$(expr \${start_line} + ${lines_per_job})
+    sed -n -e \${start_line},\${end_line}p pairwise_poplist.txt > pairwise_poplist.\${start_line}.txt
+    let start_line=\$(expr \${end_line} + 1)
   done
   """
 }
