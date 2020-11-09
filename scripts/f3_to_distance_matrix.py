@@ -5,9 +5,8 @@ def make_f3_matrix(f3_matrix, in_file):
     data = np.genfromtxt(in_file, autostrip=True, dtype=str, skip_header=13, usecols=[1,2,4])
     data = np.char.replace(data, 'ind', '').astype(np.float32)
     for row in data:
-        print(row[0],row[1])
-        f3_matrix[int(row[0])][int(row[1])]=row[2]/1000
-        f3_matrix[int(row[1])][int(row[0])]=row[2]/1000
+        f3_matrix[int(row[0])][int(row[1])]+=row[2]/1000
+        f3_matrix[int(row[1])][int(row[0])]+=row[2]/1000
 
     return(f3_matrix)
 
@@ -43,10 +42,17 @@ output_file_name=args[1]
 f3_logs=args[2:]
 
 num_inds = n_per_pop*9
-f3_matrix = np.ones((num_inds,num_inds),dtype=np.float64)
+f3_matrix = np.zeros((num_inds,num_inds),dtype=np.float64)
 
 for log in f3_logs:
   f3_matrix=make_f3_matrix(f3_matrix, log)
+
+
+## Since the values within the matrix are the sum of f3 across all chromosomes, the matrix then needs to be divided by the number of chromosomes to get the average f3 across all chromosomes.
+## After division, the diagonal needs to be reset to 1 to reflect 0 distance within individual.
+
+f3_matrix=f3_matrix/20
+np.fill_diagonal(f3_matrix, 1)
 
 np.savetxt(output_file_name, f3_matrix, delimiter='\t', fmt="%.07f")
 
