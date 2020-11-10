@@ -56,6 +56,7 @@ process msprime{
   output:
   tuple val(chrom_name), val("all"), path("all_vars_m${params.four_mN}_chr${chrom_name}.geno"), path("all_vars_m${params.four_mN}_chr${chrom_name}.snp"), path("all_vars_m${params.four_mN}_chr${chrom_name}.ind"), path("all_vars_m${params.four_mN}_chr${chrom_name}.indEach") into (ch_all_vars_datasets)
   tuple val(chrom_name), val("common"), path("common_vars_m${params.four_mN}_chr${chrom_name}.geno"), path("common_vars_m${params.four_mN}_chr${chrom_name}.snp"), path("common_vars_m${params.four_mN}_chr${chrom_name}.ind"), path("common_vars_m${params.four_mN}_chr${chrom_name}.indEach") into (ch_common_vars_datasets, ch_for_1240k_input_geno, ch_for_1240k_input_snp, ch_for_1240k_input_ind, ch_for_1240k_input_indEach)
+  tuple val(chrom_name), val("rare"), path("rare_vars_m${params.four_mN}_chr${chrom_name}.freqsum.gz") into ch_rare_vars_datasets
 /*  tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.geno") into ch_all_vars_geno_for_f3
   tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.snp") into ch_all_vars_snp_for_f3
   tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.ind") into ch_all_vars_ind_for_f3
@@ -218,3 +219,38 @@ process compile_F3_matrix {
   """
 }
 
+process run_Rascal {
+  tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
+  publishDir "${params.outdir}/results/ras/${params.chrom_length}/${params.four_mN}/", mode: 'copy'
+  queue "short"
+  memory '8GB'
+  cpus 2
+
+  input:
+  tuple chrom_name, variant_set, path(freqsum_input) from ch_rare_vars_datasets
+
+  output:
+  path("*.out") into ch_for_ras_matrix_generation
+
+  script:
+  // First individual is 'ind0' so maximum individual number is 1 less than the product.
+  num_inds= params.n_ind_per_pop * 9 - 1
+  """
+  ## Create list of all individuals from the number of individuals per population times 9.
+  for ind1 in `seq 0 ${num_inds}`; do
+    ## This will create a comma separated list with all individual names that has a trailing comma.
+    ras_ind_list+="ind\${ind1},"
+  done
+  
+  ## Ascertain in, and calculate RAS for all non-Ref populations (-a, -L, -c)
+  ## The input contains only one chromosome (-C 1)
+  zcat ${freqsum_input}  | ${params.rastools_dir}/RASCalculator.py --skipJackknife --details \
+    -O ${variant_set}_m${params.four_mN}_chr${chrom_name}.out \
+    -o Ref \
+    -M 5 \
+    -c \${ras_ind_list%,} \
+    -L \${ras_ind_list%,} \
+    -a \${ras_ind_list%,} \
+    -C 20
+  """
+}
