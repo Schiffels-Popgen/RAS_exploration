@@ -14,6 +14,8 @@ def helpMessage() {
   Mandatory arguments:
       -profile [str]          Institution or personal hardware config to use (e.g. standard, docker, singularity, conda, aws). Ask your system admin if unsure, or check documentation.
 
+      --outdir [str]          The desired directory within which all output files will be placed. Subdirectories `data/<chrom_length>/<four_mN>` and `results/<chrom_length>/<four_mN>` will be created within this directory.
+
       --four_mN [float]           The scaled migration rate between non-diagonal neighbour populations used in the simulation.
 
       --chrom_length [float]  The length of the simulated chromosomes.
@@ -44,7 +46,7 @@ println ""
 process msprime{
   
   tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
-  publishDir "/projects1/MICROSCOPE/rarevar_sim_study/data/${params.chrom_length}/${params.four_mN}", mode: 'copy'
+  publishDir "${params.outdir}/data/${params.chrom_length}/${params.four_mN}", mode: 'copy'
   queue "long"
   memory '8GB'
   
@@ -83,7 +85,7 @@ ch_common_vars_indEach_for_1240k=ch_for_1240k_input_indEach.map{ it[5] }
 process make_1240k{
 
   tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
-  publishDir "/projects1/MICROSCOPE/rarevar_sim_study/data/${params.chrom_length}/${params.four_mN}", mode: 'copy'
+  publishDir "${params.outdir}/data/${params.chrom_length}/${params.four_mN}", mode: 'copy'
   queue "short"
   memory '1GB'
 
@@ -120,7 +122,7 @@ process make_1240k{
 process make_poplists {
 
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "/projects1/MICROSCOPE/rarevar_sim_study/results/f3/${params.chrom_length}/${params.four_mN}/poplists", mode: 'copy'
+  publishDir "${params.outdir}/results/f3/${params.chrom_length}/${params.four_mN}/poplists", mode: 'copy'
   queue "short"
   memory '1GB'
 
@@ -167,7 +169,7 @@ ch_f3_input = ch_all_vars_datasets
 process f3 {
   conda 'bioconda::admixtools=6.0'
   tag "${variant_set}_chr${chrom_name}_m${params.four_mN}_l${params.chrom_length}"
-  publishDir "/projects1/MICROSCOPE/rarevar_sim_study/results/f3/${params.chrom_length}/${params.four_mN}", mode: 'copy'
+  publishDir "${params.outdir}/results/f3/${params.chrom_length}/${params.four_mN}", mode: 'copy'
   queue "short"
   memory '8GB'
 
@@ -200,7 +202,7 @@ ch_f3_output
 
 process compile_F3_matrix {
   tag "${variant_set}_f3_matrix"
-  publishDir "/projects1/MICROSCOPE/rarevar_sim_study/results/f3/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
+  publishDir "${params.outdir}/results/f3/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
   queue "short"
   memory '8GB'
 
@@ -215,3 +217,4 @@ process compile_F3_matrix {
   /projects1/MICROSCOPE/rarevar_sim_study/scripts/f3_to_distance_matrix.py ${params.n_ind_per_pop} ${variant_set}_similarity_matrix.txt ${f3_logs}
   """
 }
+
