@@ -21,6 +21,8 @@ def helpMessage() {
       --chrom_length [float]  The length of the simulated chromosomes.
 
       --n_ind_per_pop [int]   The sample size of each of the 9 populations. All populations have an equal population and sample size.
+
+      --max_ras_ac [int]      The maximum allele count to be considered for rare allele sharing.
   """.stripIndent()
 }
 
@@ -243,14 +245,31 @@ process run_Rascal {
   done
   
   ## Ascertain in, and calculate RAS for all non-Ref populations (-a, -L, -c)
-  ## The input contains only one chromosome (-C 1)
   zcat ${freqsum_input}  | ${params.rastools_dir}/RASCalculator.py --skipJackknife --details \
     -O ${variant_set}_m${params.four_mN}_chr${chrom_name}.out \
     -o Ref \
-    -M 5 \
+    -M ${params.max_ras_ac} \
     -c \${ras_ind_list%,} \
     -L \${ras_ind_list%,} \
     -a \${ras_ind_list%,} \
     -C 20
+  """
+}
+
+process compile_ras_matrix {
+  tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
+  publishDir "${params.outdir}/results/ras/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
+  queue "short"
+  memory '8GB'
+
+  input:
+  path ras_logs from ch_for_ras_matrix_generation.collect()
+  
+  output:
+  path("rare_similarity_matrix.ac*.txt")
+  
+  script:
+  """
+  /projects1/MICROSCOPE/rarevar_sim_study/scripts/ras_to_distance_matrices.py ${params.max_ras_ac} ${ras_logs}
   """
 }
