@@ -71,8 +71,8 @@ process msprime{
   
   script:
   """
-  /projects1/MICROSCOPE/rarevar_sim_study/scripts/simulation.py -c ${params.chrom_length} -n ${chrom_name} -s ${params.n_ind_per_pop} -m ${params.four_mN} #-o /projects1/MICROSCOPE/rarevar_sim_study/data/
-  /projects1/MICROSCOPE/rarevar_sim_study/scripts/add_ref_and_sort_eigenstrat.sh ${chrom_name} ${params.four_mN} .
+  ${baseDir}/simulation.py -c ${params.chrom_length} -n ${chrom_name} -s ${params.n_ind_per_pop} -m ${params.four_mN} #-o /projects1/MICROSCOPE/rarevar_sim_study/data/
+  ${baseDir}/add_ref_and_sort_eigenstrat.sh ${chrom_name} ${params.four_mN} .
   """
 }
 
@@ -170,7 +170,7 @@ ch_f3_input = ch_all_vars_datasets
                     .spread(ch_pairwise_poplists_f3)
 
 process f3 {
-  conda 'bioconda::admixtools=6.0'
+//  conda 'bioconda::admixtools=6.0' // Added directly to environment.yml.
   tag "${variant_set}_chr${chrom_name}_m${params.four_mN}_l${params.chrom_length}"
   publishDir "${params.outdir}/results/f3/${params.chrom_length}/${params.four_mN}", mode: 'copy'
   queue "short"
@@ -217,7 +217,7 @@ process compile_F3_matrix {
 
   script:
   """
-  /projects1/MICROSCOPE/rarevar_sim_study/scripts/f3_to_distance_matrix.py ${params.n_ind_per_pop} ${variant_set}_similarity_matrix.txt ${f3_logs}
+  ${baseDir}/f3_to_distance_matrix.py ${params.n_ind_per_pop} ${variant_set}_similarity_matrix.txt ${f3_logs}
   """
 }
 
@@ -270,6 +270,6 @@ process compile_ras_matrix {
   
   script:
   """
-  /projects1/MICROSCOPE/rarevar_sim_study/scripts/ras_to_distance_matrices.py ${params.max_ras_ac} ${ras_logs}
+  ${baseDir}/ras_to_distance_matrices.py ${params.max_ras_ac} ${ras_logs}
   """
 }
