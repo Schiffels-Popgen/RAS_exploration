@@ -14,6 +14,7 @@ dependencies:
   - conda-forge::msprime=0.7.4
   - conda-forge::tskit=0.2.3
   - conda-forge::pandas=1.1.2
+  - bioconda::admixtools=6.0
   - pip
   - pip:
     - wcmatch
