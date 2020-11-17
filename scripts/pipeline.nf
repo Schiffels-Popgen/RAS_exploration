@@ -49,7 +49,6 @@ process msprime{
   
   tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
   publishDir "${params.outdir}/data/${params.chrom_length}/${params.four_mN}", mode: 'copy'
-  queue "long"
   memory '8GB'
   
   input:
@@ -89,7 +88,6 @@ process make_1240k{
 
   tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
   publishDir "${params.outdir}/data/${params.chrom_length}/${params.four_mN}", mode: 'copy'
-  queue "short"
   memory '1GB'
 
   input:
@@ -126,7 +124,6 @@ process make_poplists {
 
   tag "m${params.four_mN}_l${params.chrom_length}"
   publishDir "${params.outdir}/results/f3/${params.chrom_length}/${params.four_mN}/poplists", mode: 'copy'
-  queue "short"
   memory '1GB'
 
   output:
@@ -173,7 +170,6 @@ process f3 {
 //  conda 'bioconda::admixtools=6.0' // Added directly to environment.yml.
   tag "${variant_set}_chr${chrom_name}_m${params.four_mN}_l${params.chrom_length}"
   publishDir "${params.outdir}/results/f3/${params.chrom_length}/${params.four_mN}", mode: 'copy'
-  queue "short"
   memory '8GB'
 
   input:
@@ -206,7 +202,6 @@ ch_f3_output
 process compile_F3_matrix {
   tag "${variant_set}_f3_matrix"
   publishDir "${params.outdir}/results/f3/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
-  queue "short"
   memory '8GB'
 
   input:
@@ -224,7 +219,6 @@ process compile_F3_matrix {
 process run_Rascal {
   tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
   publishDir "${params.outdir}/results/ras/${params.chrom_length}/${params.four_mN}/", mode: 'copy'
-  queue "short"
   memory '8GB'
   cpus 2
 
@@ -259,7 +253,6 @@ process run_Rascal {
 process compile_ras_matrix {
   tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
   publishDir "${params.outdir}/results/ras/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
-  queue "short"
   memory '8GB'
 
   input:
