@@ -64,11 +64,11 @@ args=sys.argv[1:]
 
 if "-h" in args or "--help" in args or len(sys.argv) == 1:
   print("""
-  A small script to compile cumulative AC distance matrices out of a provided set of ras output files.
+  A small script to compile cumulative AC similarity matrices out of a provided set of ras output files.
   All arguments are positional. Multiple log files can be provided one after another.
   
   Usage:
-  ras_to_distance_matrices.py <Max_ras_ac> <ras output files>
+  ras_to_similarity_matrices.py <Max_ras_ac> <ras output files>
   
   Options:
     -h,--help   Print this text and exit.

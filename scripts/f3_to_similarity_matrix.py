@@ -17,7 +17,7 @@ args=sys.argv[1:]
 
 if "-h" in args or "--help" in args or len(sys.argv) == 1:
   print("""
-  A small script to compile a distance matrix out of a provided set of qp3Pop output files, plus the number of individuals in each population. Assumes there are 9 populations.
+  A small script to compile a similarity matrix out of a provided set of qp3Pop output files, plus the number of individuals in each population. Assumes there are 9 populations.
   All arguments are positional. Multiple log files can be provided one after another.
   
   Usage:
