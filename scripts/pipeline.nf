@@ -123,7 +123,7 @@ process make_1240k{
 process make_poplists {
 
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/f3/${params.chrom_length}/${params.four_mN}/poplists", mode: 'copy'
+  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/f3/poplists", mode: 'copy'
   memory '1GB'
 
   output:
@@ -169,7 +169,7 @@ ch_f3_input = ch_all_vars_datasets
 process f3 {
 //  conda 'bioconda::admixtools=6.0' // Added directly to environment.yml.
   tag "${variant_set}_chr${chrom_name}_m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/f3/${params.chrom_length}/${params.four_mN}", mode: 'copy'
+  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/f3", mode: 'copy'
   memory '8GB'
 
   input:
@@ -201,24 +201,24 @@ ch_f3_output
 
 process compile_F3_matrix {
   tag "${variant_set}_f3_matrix"
-  publishDir "${params.outdir}/results/f3/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
+  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
   memory '8GB'
 
   input:
   tuple chrom_name, variant_set, path(f3_logs) from ch_for_f3_matrix_generation
 
   output:
-  path("${variant_set}_similarity_matrix.txt")
+  tuple variant_set,path("${variant_set}_similarity_matrix.txt") into ch_eigenstrat_similarity_matrices
 
   script:
   """
-  ${baseDir}/f3_to_distance_matrix.py ${params.n_ind_per_pop} ${variant_set}_similarity_matrix.txt ${f3_logs}
+  ${baseDir}/f3_to_similarity_matrix.py ${params.n_ind_per_pop} ${variant_set}_similarity_matrix.txt ${f3_logs}
   """
 }
 
 process run_Rascal {
   tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/ras/${params.chrom_length}/${params.four_mN}/", mode: 'copy'
+  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/ras", mode: 'copy'
   memory '8GB'
   cpus 2
 
@@ -226,7 +226,7 @@ process run_Rascal {
   tuple chrom_name, variant_set, path(freqsum_input) from ch_rare_vars_datasets
 
   output:
-  path("*.out") into ch_for_ras_matrix_generation
+  tuple chrom_name, variant_set, path("*.out") into ch_ras_output
 
   script:
   // First individual is 'ind0' so maximum individual number is 1 less than the product.
@@ -250,19 +250,47 @@ process run_Rascal {
   """
 }
 
+/* Group the ras_output channel by snp_set, so that one job is ran per variant set, and it contains all the output files associated with that variant set."*/
+ch_ras_output
+        .groupTuple(by: 1)
+        .set{ ch_for_ras_matrix_generation }
+
 process compile_ras_matrix {
-  tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/ras/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
+  tag "m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
   memory '8GB'
 
   input:
-  path ras_logs from ch_for_ras_matrix_generation.collect()
+  tuple chrom_name, variant_set, path(ras_logs) from ch_for_ras_matrix_generation
   
   output:
-  path("rare_similarity_matrix.ac*.txt")
+  tuple variant_set, path("rare_similarity_matrix.ac*.txt") into ch_rare_similarity_matrices
   
   script:
   """
-  ${baseDir}/ras_to_distance_matrices.py ${params.max_ras_ac} ${ras_logs}
+  ${baseDir}/ras_to_similarity_matrices.py ${params.max_ras_ac} ${ras_logs}
+  """
+}
+
+
+ch_eigenstrat_similarity_matrices
+        .mix(ch_rare_similarity_matrices)
+/*        .dump(tag:"mixed similarity matrices")*/
+        .set{ ch_similarity_matrices }
+
+process convert_to_distance_matrix{
+  tag "m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/distance_matrices", mode: 'copy'
+  memory '8GB'
+
+  input:
+    tuple variant_set, path(similarity_matrices) from ch_similarity_matrices
+
+  output:
+    tuple variant_set, path('*_distance_matrix*txt') into ch_distance_matrices
+
+  script:
+  """
+  ${baseDir}/similarity_to_distance.py ${variant_set} ${similarity_matrices}
   """
 }
