@@ -32,4 +32,5 @@ for f in input_files:
   else:
     output_file_name='{}_distance_matrix.txt'.format(variant_set)
   data = np.genfromtxt(f)
+  np.fill_diagonal(data, 1) ## Distance matrices must have 0 distance within individual
   np.savetxt(output_file_name, 1-data, delimiter='\t', fmt="%.09f")
