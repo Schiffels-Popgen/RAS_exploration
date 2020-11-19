@@ -276,7 +276,7 @@ process compile_ras_matrix {
 ch_eigenstrat_similarity_matrices
         .mix(ch_rare_similarity_matrices)
 /*        .dump(tag:"mixed similarity matrices")*/
-        .into { ch_similarity_matrices; ch_similarity_matrices_for_KNN}
+        .into { ch_similarity_matrices; ch_similarity_matrices_for_Heatmap; ch_similarity_matrices_for_KNN}
 
 process convert_to_distance_matrix{
   tag "m${params.four_mN}_l${params.chrom_length}"
@@ -295,7 +295,7 @@ process convert_to_distance_matrix{
   """
 }
 
-// Filter distance matrices to exclude all rare variant matrices except the one with the maximum AC.
+// Filter similarity and distance matrices to exclude all rare variant matrices except the one with the maximum AC.
 ch_distance_matrices
         .map{
           def snp_set = it[0]
@@ -306,6 +306,17 @@ ch_distance_matrices
         }
         .collect()
         .set { ch_for_MDS }
+
+ch_similarity_matrices_for_Heatmap
+        .map{
+          def snp_set = it[0]
+          def files = it[1]
+          def matrix = snp_set == "rare" ? files.find {it =~ /[A-Za-z0-9_]*.ac${params.max_ras_ac}.txt/ } : files
+  
+          [ matrix ]
+        }
+        .collect()
+        .set { ch_for_Heatmap }
 
 process do_MDS {
   tag "m${params.four_mN}_l${params.chrom_length}"
@@ -323,3 +334,21 @@ process do_MDS {
   ${baseDir}/distance_to_MDS_plot.py ${params.four_mN} ${params.n_ind_per_pop} ${distance_matrices}
   """
 }
+
+process do_Heatmap {
+  tag "m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${params.outdir}/plots/Heatmaps/", mode: 'copy'
+  memory '8GB'
+  
+  input:
+  path(similarity_matrices) from ch_for_Heatmap
+
+  output:
+  path('*pdf')
+
+  script:
+  """
+  ${baseDir}/similarity_to_heatmap.py ${params.four_mN} ${params.n_ind_per_pop} ${similarity_matrices}
+  """
+}
+
