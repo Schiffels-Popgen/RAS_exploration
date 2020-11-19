@@ -67,8 +67,21 @@ if "-h" in args or "--help" in args or len(sys.argv) == 1:
   """)
   sys.exit(0)
 
-m=args[1]
-n_ind_per_pop=int(args[2])
+try:
+  m=float(args[1])
+except ValueError:
+  print("""
+  ERROR: The first argument should be a float equal to the scaled migration rate used for the simulation.
+  Execution halted.
+  """)
+
+try:
+  n_ind_per_pop=int(args[2])
+except ValueError:
+  print("""
+  ERROR: The second argument should be an integer equal to the number of sampled individuals in each of the 9 simulated populations.
+  Execution halted.
+  """)
 input_matrices=args[3:]
 
 sm=read_matrices(input_matrices)
