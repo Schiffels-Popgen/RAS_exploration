@@ -276,7 +276,7 @@ process compile_ras_matrix {
 ch_eigenstrat_similarity_matrices
         .mix(ch_rare_similarity_matrices)
 /*        .dump(tag:"mixed similarity matrices")*/
-        .set{ ch_similarity_matrices }
+        .into { ch_similarity_matrices; ch_similarity_matrices_for_KNN}
 
 process convert_to_distance_matrix{
   tag "m${params.four_mN}_l${params.chrom_length}"
@@ -292,5 +292,34 @@ process convert_to_distance_matrix{
   script:
   """
   ${baseDir}/similarity_to_distance.py ${variant_set} ${similarity_matrices}
+  """
+}
+
+// Filter distance matrices to exclude all rare variant matrices except the one with the maximum AC.
+ch_distance_matrices
+        .map{
+          def snp_set = it[0]
+          def files = it[1]
+          def matrix = snp_set == "rare" ? files.find {it =~ /[A-Za-z0-9_]*.ac${params.max_ras_ac}.txt/ } : files
+          
+          [ matrix ]
+        }
+        .collect()
+        .set { ch_for_MDS }
+
+process do_MDS {
+  tag "m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${params.outdir}/plots/MDS/", mode: 'copy'
+  memory '8GB'
+  
+  input:
+  path(distance_matrices) from ch_for_MDS
+
+  output:
+  path('*pdf')
+
+  script:
+  """
+  ${baseDir}/distance_to_MDS_plot.py ${params.four_mN} ${params.n_ind_per_pop} ${distance_matrices}
   """
 }
