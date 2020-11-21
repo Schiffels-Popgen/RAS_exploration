@@ -14,10 +14,9 @@ population_colours={
 ## Colour definitions for snp_sets (for KNN)
 snp_set_colours={
   "all":"blue",
-  "common":"purple",
-  "1240k":"magenta",
-  "rare_ac2":"gray60",
-  "rare_ac3":"gray70",
-  "rare_ac4":"gray80",
-  "rare_ac5":"gray90"
-}
+  "common":"green",
+  "1240k":"lightgreen",
+  "rare_ac2":"#b3b3b3",
+  "rare_ac3":"#7f7f7f",
+  "rare_ac4":"#4d4d4d",
+  "rare_ac5":"#1a1a1a"}
