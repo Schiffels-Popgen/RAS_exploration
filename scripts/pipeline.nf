@@ -341,7 +341,7 @@ process do_Heatmap {
   tag "m${params.four_mN}_l${params.chrom_length}"
   publishDir "${params.outdir}/plots/${params.chrom_length}/Heatmaps/", mode: 'copy'
   memory '8GB'
-  time '10m'
+//  time '10m'
   
   input:
   path(similarity_matrices) from ch_for_Heatmap
@@ -359,7 +359,7 @@ process do_KNN {
   tag "m${params.four_mN}_${snp_set}_l${params.chrom_length}"
   publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/KNN_classification", mode: 'copy'
   memory '8GB'
-  time '10m'
+//  time '10m'
   
   input:
   tuple variant_set, path(similarity_matrices) from ch_distance_matrices_for_KNN
@@ -385,7 +385,7 @@ process plot_KNN {
   tag "l${params.chrom_length}"
   publishDir "${params.outdir}/plots/${params.chrom_length}/KNN_classification/", mode: 'copy'
   memory '8GB'
-  time '10m'
+//  time '10m'
 
   input:
   path(knn_files) from ch_for_KNN_plotting.collect().dump()
