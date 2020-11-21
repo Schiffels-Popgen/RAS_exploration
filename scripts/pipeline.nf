@@ -23,6 +23,8 @@ def helpMessage() {
       --n_ind_per_pop [int]   The sample size of each of the 9 populations. All populations have an equal population and sample size.
 
       --max_ras_ac [int]      The maximum allele count to be considered for rare allele sharing.
+      
+      --knn [int]             The number of nearest neighbours to be used for KNN classification.
   """.stripIndent()
 }
 
@@ -287,7 +289,7 @@ process convert_to_distance_matrix{
     tuple variant_set, path(similarity_matrices) from ch_similarity_matrices
 
   output:
-    tuple variant_set, path('*_distance_matrix*txt') into ch_distance_matrices
+    tuple variant_set, path('*_distance_matrix*txt') into (ch_distance_matrices, ch_distance_matrices_for_KNN)
 
   script:
   """
@@ -320,7 +322,7 @@ ch_similarity_matrices_for_Heatmap
 
 process do_MDS {
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/plots/MDS/", mode: 'copy'
+  publishDir "${params.outdir}/plots/${params.chrom_length}/MDS/", mode: 'copy'
   memory '8GB'
   
   input:
@@ -337,8 +339,9 @@ process do_MDS {
 
 process do_Heatmap {
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/plots/Heatmaps/", mode: 'copy'
+  publishDir "${params.outdir}/plots/${params.chrom_length}/Heatmaps/", mode: 'copy'
   memory '8GB'
+  time '10m'
   
   input:
   path(similarity_matrices) from ch_for_Heatmap
@@ -352,3 +355,46 @@ process do_Heatmap {
   """
 }
 
+process do_KNN {
+  tag "m${params.four_mN}_${snp_set}_l${params.chrom_length}"
+  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/KNN_classification", mode: 'copy'
+  memory '8GB'
+  time '10m'
+  
+  input:
+  tuple variant_set, path(similarity_matrices) from ch_distance_matrices_for_KNN
+
+  output:
+  path ('KNN*.txt') 
+  path ('') into ch_dummy_plotting_delay // Output goes into a dummy channel that is only used to delay the plotting of all the KNN results across all four_mN runs thus far.
+
+  script:
+  """
+  ${baseDir}/distance_to_KNN.py ${params.four_mN} ${params.n_ind_per_pop} ${variant_set} ${params.knn} ${similarity_matrices}
+  """
+}
+
+/* Create a channel that picks up all KNN results from the same chrom_length regardless of four_mN value. 
+  In that channel, mix the dummy delay channel and fiter for unique files to avoid any duplications. */
+ch_for_KNN_plotting=Channel.fromPath("${params.outdir}/results/${params.chrom_length}/*/KNN_classification/KNN_K${params.knn}*.txt")
+          .mix(ch_dummy_plotting_delay)
+          .unique()
+/*          .dump(tag:"for KNN Plot")*/
+
+process plot_KNN {
+  tag "l${params.chrom_length}"
+  publishDir "${params.outdir}/plots/${params.chrom_length}/KNN_classification/", mode: 'copy'
+  memory '8GB'
+  time '10m'
+
+  input:
+  path(knn_files) from ch_for_KNN_plotting.collect().dump()
+
+  output:
+  path('KNN_summary_plot*pdf')
+
+  script:
+  """
+  ${baseDir}/plot_KNN.py ${params.chrom_length} ${knn_files}
+  """
+}
