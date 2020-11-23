@@ -19,6 +19,7 @@ def plot_KNN (summary_table, snp_set_colours, chrom_length):
     ax = summary_table.pivot(index="m", columns="snp_set", values="success_rate").plot.line(
       color=snp_set_colours, figsize=(15,10))
     ax.legend(title="Variant set")
+    ax.set_xscale('log')
     fig = ax.get_figure()
     fig.savefig("KNN_summary_plot.l{}.pdf".format(chrom_length))
 
