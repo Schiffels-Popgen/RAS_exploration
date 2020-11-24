@@ -24,7 +24,7 @@ def plot_heatmaps(sm, m, n_ind_per_pop, population_colours):
     
     for snp_set,matrix in sm.items():
         plt.rcParams.update({'font.size': 20})
-        add_subplot(plot_column[snp_set], sm[snp_set], snp_set, 1, population_colours, num_inds, n_ind_per_pop)
+        add_subplot(plot_column[snp_set], sm[snp_set], snp_set, m, population_colours, num_inds, n_ind_per_pop)
     f.savefig('Heatmap.m{}.pdf'.format(m))
 
 ## Helper function to add a subplot to the image
