@@ -20,6 +20,7 @@ def plot_KNN (summary_table, snp_set_colours, chrom_length):
       color=snp_set_colours, figsize=(15,10))
     ax.legend(title="Variant set")
     ax.set_xscale('log')
+    ax.set_ylim(-0.05,1.05)
     fig = ax.get_figure()
     fig.savefig("KNN_summary_plot.l{}.pdf".format(chrom_length))
 
