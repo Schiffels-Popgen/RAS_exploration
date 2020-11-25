@@ -17,11 +17,11 @@ def do_mds(dm, m, population_colours, num_dim = 2, num_inds_per_pop = 20):
     ## dm is a dictionary where the keys are the snp sets and values are the distance matrix pd dataframes. 
     x_2d={}
     output_plot="MDS_m{}.pdf".format(m)
-    f, (ax1, ax2, ax3, ax4) = plt.subplots(ncols=4)
+    f, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(ncols=5)
 
     f.set_figheight(7.5)
-    f.set_figwidth(4*7.5)
-    plot_column={"all":ax1, "common":ax2, "1240k":ax3, "rare":ax4}
+    f.set_figwidth(5*7.5)
+    plot_column={"all":ax1, "all.rascal":ax2, "common":ax3, "1240k":ax4, "rare":ax5}
 
     for snp_set,matrix in dm.items():
         x_2d[snp_set]=pcoa(matrix, number_of_dimensions = num_dim)

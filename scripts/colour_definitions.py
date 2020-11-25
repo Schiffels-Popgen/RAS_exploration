@@ -13,7 +13,8 @@ population_colours={
 
 ## Colour definitions for snp_sets (for KNN)
 snp_set_colours={
-  "all":"blue",
+  "all":"blue",  
+  "all.rascal":"lightblue",
   "common":"green",
   "1240k":"lightgreen",
   "rare_ac2":"#b3b3b3",

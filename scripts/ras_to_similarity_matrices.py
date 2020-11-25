@@ -1,9 +1,21 @@
 #!/usr/bin/env python3
 ##  A function to add the RAS and NSites of a ras log to a matrix of ras results.
 ##  If the ras result matrix is empty, returns the given ras log.
-def sum_ras_logs(summed_logs, ras_log, max_af):
+def sum_ras_logs(summed_ras, summed_f3, ras_log, max_af):
     ## Read in data while ignoring the first 6 lines in the file (header)
     data = pd.read_csv(ras_log, sep="\t", skiprows=6, header=None, names=["IndA","IndB","RAS","NSites","ras","rasErr","AC"])
+    
+    ## Create dataset with only the F3 results for all_vars, and sum across ras_logs.
+    f3_data = data[data["AC"]=="Outgroup F3"]
+    f3_data = f3_data.rename(columns={"ras": "f3"}) ## Rename ras column to f3 for later.
+    
+    ## If summed_f3 is empty, return the f3_data. (for first parsed log)
+    if summed_f3.empty:
+      summed_f3 = f3_data
+    else:
+      summed_f3["RAS"] = summed_f3["RAS"] + f3_data["RAS"]
+      summed_f3["NSites"] = summed_f3["NSites"] + data["NSites"]
+    
     ## Delete rows where the measurement is Outgroup F3 (i.e. keep only ras)
     data = data[data["AC"]!="Outgroup F3"]
     ## Delete the total RAS rows, since these need to be recalculated anyway.
@@ -14,17 +26,41 @@ def sum_ras_logs(summed_logs, ras_log, max_af):
     ## To save on memory, drop the unused ras and rasErr columns.
     ## Ras will be recalculated from the RAS and NSites columns after all chromosomes are compiled. 
     data = data.drop(["ras","rasErr"],axis=1)
-    ## If summed_logs is empty, return the parsed ras_log contents
-    if summed_logs.empty:
-      return(data)
+    ## If summed_ras is empty, return the parsed ras_log contents
+    if summed_ras.empty:
+      summed_ras = data
     ## Otherwise, add the "RAS" and "NSites" of the two matrices and return the new matrix.
     else:
-      summed_logs["RAS"] = summed_logs["RAS"] + data["RAS"]
-      summed_logs["NSites"] = summed_logs["NSites"] + data["NSites"]
-      return(summed_logs)
+      summed_ras["RAS"] = summed_ras["RAS"] + data["RAS"]
+      summed_ras["NSites"] = summed_ras["NSites"] + data["NSites"]
+    return(summed_ras, summed_f3)
+
+def convert_f3_to_similarity_matrix(summed_logs):
+  ## First, compute f3 from the RAS and NSites columns
+  summed_logs["f3"] = summed_logs["RAS"] / summed_logs["NSites"]
+  ## These columns are no longer needed
+  summed_logs = summed_logs.drop(["RAS","NSites"], axis=1)
+  
+  ## Group by IndA/IndB combination and sum those lines to get summed ras (and AC which is nonsense).
+  ## rename_axis and reset_index reformat the resulting dataframe to include IndA and IndB as actual columns and not rownames.
+  grouped_filtered = summed_logs.groupby(["IndA","IndB"]).sum().rename_axis(["IndA","IndB"]).reset_index()
+  
+  ## Infer number of individuals
+  num_inds = len(grouped_filtered["IndA"].unique())
+  
+  ## Pivot grouped_filtered into a similarity matrix
+  grouped_filtered = grouped_filtered.pivot(index="IndA", columns="IndB", values="f3")
+  ## The matrix then needs to be reindexed so it is in the desired order (by individual number instead of alphanumerically)
+  desired_order = ["ind"+str(i) for i in range(num_inds)]
+  grouped_filtered = grouped_filtered.reindex(index=desired_order, columns=desired_order)
+  
+  ## Set within individual similarity to 1.
+  # np.fill_diagonal(grouped_filtered.values, 1)
+  
+  return(grouped_filtered)
 
 ## Function to convert the summed ras logs into a ras similarity matrix.
-def convert_to_similarity_matrix(summed_logs, max_af):
+def convert_ras_to_similarity_matrix(summed_logs, max_af):
     ## First, compute ras from the RAS and NSites columns
     summed_logs["ras"] = summed_logs["RAS"] / summed_logs["NSites"]
     ## These columns are no longer needed
@@ -51,6 +87,9 @@ def convert_to_similarity_matrix(summed_logs, max_af):
       
       summed_ras_by_ac[m]=grouped_filtered
     return(summed_ras_by_ac)
+
+def export_f3_matrix(summed_f3):
+  summed_f3.to_csv("all.rascal_similarity_matrix.txt", sep='\t', header=False, index=False, float_format='%.9f')
 
 def export_ras_matrices(summed_ras_by_ac):
     for af,matrix in summed_ras_by_ac.items():
@@ -86,13 +125,15 @@ except ValueError:
 
 ras_logs=args[1:]
 
-## Sum RAS and NSites across all chromosomes
-summed_logs=pd.DataFrame()
+## Sum RAS/F3 and NSites across all chromosomes
+summed_ras=pd.DataFrame()
+summed_f3=pd.DataFrame()
 for log in ras_logs:
-  summed_logs = sum_ras_logs(summed_logs, log, max_af)
+  (summed_ras, summed_f3) = sum_ras_logs(summed_ras, summed_f3, log, max_af)
 
 ## Calcuate ras from summed RAS and NSites, then convert to a similarity matrix
-summed_ras_by_ac = convert_to_similarity_matrix(summed_logs, max_af)
-
+summed_ras_by_ac = convert_ras_to_similarity_matrix(summed_ras, max_af)
+summed_f3 = convert_f3_to_similarity_matrix(summed_f3)
 ## Export matrices into tsv format
 export_ras_matrices(summed_ras_by_ac)
+export_f3_matrix(summed_f3)

@@ -59,7 +59,7 @@ process msprime{
   output:
   tuple val(chrom_name), val("all"), path("all_vars_m${params.four_mN}_chr${chrom_name}.geno"), path("all_vars_m${params.four_mN}_chr${chrom_name}.snp"), path("all_vars_m${params.four_mN}_chr${chrom_name}.ind"), path("all_vars_m${params.four_mN}_chr${chrom_name}.indEach") into (ch_all_vars_datasets)
   tuple val(chrom_name), val("common"), path("common_vars_m${params.four_mN}_chr${chrom_name}.geno"), path("common_vars_m${params.four_mN}_chr${chrom_name}.snp"), path("common_vars_m${params.four_mN}_chr${chrom_name}.ind"), path("common_vars_m${params.four_mN}_chr${chrom_name}.indEach") into (ch_common_vars_datasets, ch_for_1240k_input_geno, ch_for_1240k_input_snp, ch_for_1240k_input_ind, ch_for_1240k_input_indEach)
-  tuple val(chrom_name), val("rare"), path("rare_vars_m${params.four_mN}_chr${chrom_name}.freqsum.gz") into ch_rare_vars_datasets
+  tuple val(chrom_name), val("rare"), path("all_vars_m${params.four_mN}_chr${chrom_name}.freqsum.gz") into ch_freqsum_dataset
 /*  tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.geno") into ch_all_vars_geno_for_f3
   tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.snp") into ch_all_vars_snp_for_f3
   tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.ind") into ch_all_vars_ind_for_f3
@@ -225,7 +225,7 @@ process run_Rascal {
   cpus 2
 
   input:
-  tuple chrom_name, variant_set, path(freqsum_input) from ch_rare_vars_datasets
+  tuple chrom_name, variant_set, path(freqsum_input) from ch_freqsum_dataset
 
   output:
   tuple chrom_name, variant_set, path("*.out") into ch_ras_output
@@ -267,6 +267,7 @@ process compile_ras_matrix {
   
   output:
   tuple variant_set, path("rare_similarity_matrix.ac*.txt") into ch_rare_similarity_matrices
+  tuple val("all.rascal"), path("all.rascal_similarity_matrix.txt") into ch_all_rascal_similarity_matrix
   
   script:
   """
@@ -277,6 +278,7 @@ process compile_ras_matrix {
 
 ch_eigenstrat_similarity_matrices
         .mix(ch_rare_similarity_matrices)
+        .mix(ch_all_rascal_similarity_matrix)
 /*        .dump(tag:"mixed similarity matrices")*/
         .into { ch_similarity_matrices; ch_similarity_matrices_for_Heatmap; ch_similarity_matrices_for_KNN}
 

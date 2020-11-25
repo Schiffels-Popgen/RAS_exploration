@@ -38,4 +38,5 @@ for var_set in "all_vars" "common_vars"; do
 done
 
 ## Also gzip the freqsum file
-gzip ${input_dir}/rare_vars_m${four_mN}_chr${chrom_name}.freqsum
+gzip ${input_dir}/all_vars_m${four_mN}_chr${chrom_name}.freqsum
+# gzip ${input_dir}/rare_vars_m${four_mN}_chr${chrom_name}.freqsum

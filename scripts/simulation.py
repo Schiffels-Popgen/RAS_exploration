@@ -118,7 +118,8 @@ num_lineages=A.shape[1]
 min_ac_common = 0.40 * num_lineages
 max_ac_common = 0.60 * num_lineages
 
-## Rare Vars
+### OUTPUT ALL_VARS IN FREQSUM FORMAT INSTEAD. This way we can calculate RAS on rare variants as well as RASCal F3 for all_vars. 
+## Rare Vars still calculated for variant_count statistics
 max_ac_derived_rare = 10
 # min_ac_ancestral_rare = num_lineages - 10 #Rare ancestral alleles (These get filtered out when using RAS anyway)
 
@@ -182,8 +183,12 @@ for variant_set_name in ["all_vars", "common_vars"]: ## Twelve_forty will be mad
 
 ## Create a freqsum file out of the rare variants
 #### Ind "Ref" is created with all genotypes being ancestral ("0")
-freqsum_output=outdir+"/rare_vars_m{}_chr{}.freqsum".format(four_mN, chrom_name)
+freqsum_output=outdir+"/all_vars_m{}_chr{}.freqsum".format(four_mN, chrom_name)
+# freqsum_output=outdir+"/rare_vars_m{}_chr{}.freqsum".format(four_mN, chrom_name)
 with open(freqsum_output, 'w') as f:
     print ("#CHROM","POS","REF","ALT",*["ind"+str(x)+"(2)" for x in range(num_inds)],"Ref(2)", sep="\t", file=f)
-    for pos,genos in zip(rare_positions, rare_vars):
+    for pos,genos in zip(all_positions, all_vars):
         print(str(chrom_name), round_up(pos), "A", "G", *genos, "0", sep="\t", file=f)
+## Older generation of rarevars only freqsum. Now outputting all_vars freqsum instead.
+    # for pos,genos in zip(rare_positions, rare_vars):
+    #     print(str(chrom_name), round_up(pos), "A", "G", *genos, "0", sep="\t", file=f)

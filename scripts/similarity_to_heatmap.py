@@ -15,11 +15,11 @@ def plot_heatmaps(sm, m, n_ind_per_pop, population_colours):
     ## sm is a dictionary where the keys are the snp sets and values are the distance matrix pd dataframes. 
     n_ind_per_pop = n_ind_per_pop
     num_inds = 9 * n_ind_per_pop
-    f, (ax1, ax2, ax3, ax4) = plt.subplots(ncols=4)
+    f, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(ncols=5)
     
     f.set_figheight(10)
-    f.set_figwidth(4*10)
-    plot_column={"all":ax1, "common":ax2, "1240k":ax3, "rare":ax4}
+    f.set_figwidth(5*10)
+    plot_column={"all":ax1, "all.rascal":ax2, "common":ax3, "1240k":ax4, "rare":ax5}
     plt.tight_layout(rect=(0,0,1,0.975))
     
     for snp_set,matrix in sm.items():
