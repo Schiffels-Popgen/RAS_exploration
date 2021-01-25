@@ -115,8 +115,8 @@ num_lineages=A.shape[1]
 
 ## Convert AF to AC for filtering
 ## Common Vars
-min_ac_common = 0.40 * num_lineages
-max_ac_common = 0.60 * num_lineages
+min_ac_common = 0.05 * num_lineages
+max_ac_common = 0.95 * num_lineages
 
 ### OUTPUT ALL_VARS IN FREQSUM FORMAT INSTEAD. This way we can calculate RAS on rare variants as well as RASCal F3 for all_vars. 
 ## Rare Vars still calculated for variant_count statistics
