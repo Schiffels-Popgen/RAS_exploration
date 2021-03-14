@@ -59,7 +59,7 @@ process msprime{
   output:
   tuple val(chrom_name), val("all"), path("all_vars_m${params.four_mN}_chr${chrom_name}.geno"), path("all_vars_m${params.four_mN}_chr${chrom_name}.snp"), path("all_vars_m${params.four_mN}_chr${chrom_name}.ind"), path("all_vars_m${params.four_mN}_chr${chrom_name}.indEach") into (ch_all_vars_datasets)
   tuple val(chrom_name), val("common"), path("common_vars_m${params.four_mN}_chr${chrom_name}.geno"), path("common_vars_m${params.four_mN}_chr${chrom_name}.snp"), path("common_vars_m${params.four_mN}_chr${chrom_name}.ind"), path("common_vars_m${params.four_mN}_chr${chrom_name}.indEach") into (ch_common_vars_datasets, ch_for_1240k_input_geno, ch_for_1240k_input_snp, ch_for_1240k_input_ind, ch_for_1240k_input_indEach)
-  tuple val(chrom_name), val("rare"), path("all_vars_m${params.four_mN}_chr${chrom_name}.freqsum.gz") into ch_freqsum_dataset
+  tuple val(chrom_name), val("rare"), path("all_vars_m${params.four_mN}_chr${chrom_name}.freqsum.gz") into (ch_freqsum_dataset, ch_for_linecount)
 /*  tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.geno") into ch_all_vars_geno_for_f3
   tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.snp") into ch_all_vars_snp_for_f3
   tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.ind") into ch_all_vars_ind_for_f3
@@ -228,7 +228,7 @@ process run_Rascal {
   tuple chrom_name, variant_set, path(freqsum_input) from ch_freqsum_dataset
 
   output:
-  tuple chrom_name, variant_set, path("*.out") into ch_ras_output
+  tuple chrom_name, variant_set, path("*.out") into (ch_ras_output_for_matrix, ch_ras_for_rasta)
 
   script:
   // First individual is 'ind0' so maximum individual number is 1 less than the product.
@@ -253,7 +253,7 @@ process run_Rascal {
 }
 
 /* Group the ras_output channel by snp_set, so that one job is ran per variant set, and it contains all the output files associated with that variant set."*/
-ch_ras_output
+ch_ras_output_for_matrix
         .groupTuple(by: 1)
         .set{ ch_for_ras_matrix_generation }
 
@@ -390,7 +390,7 @@ process plot_KNN {
 //  time '10m'
 
   input:
-  path(knn_files) from ch_for_KNN_plotting.collect().dump()
+  path(knn_files) from ch_for_KNN_plotting.collect()
 
   output:
   path('KNN_summary_plot*pdf')
@@ -398,5 +398,51 @@ process plot_KNN {
   script:
   """
   ${baseDir}/plot_KNN.py ${params.chrom_length} ${knn_files}
+  """
+}
+
+ch_prepped_for_linecount=ch_for_linecount.map{ it[2] }
+
+process freqsum_lineCount {
+  tag "m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${params.outdir}/data/${params.chrom_length}/${params.four_mN}", mode: 'copy'
+  memory '1GB'
+
+  input:
+  path freqsum_inputs from ch_prepped_for_linecount.collect()
+
+  output:
+  path('freqsum_block_sizes.txt') into ch_linecounts_for_rasta
+
+  script:
+  """
+  for file in ${freqsum_inputs}; do
+    echo -e "\${file}\t\$(zcat \${file} | wc -l)"
+  done > freqsum_block_sizes.txt
+  """
+}
+
+// From ras_for_rasta channel, keep only filename column and collect so all files are provided together
+ch_ras_for_rasta
+    .map { it [2] }
+    .collect()
+/*    .dump(tag:"ras2rasta")*/
+    .set { ch_collected_for_rasta }
+
+process make_rasta{
+  tag "m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/rasta", mode: 'copy'
+  memory '8GB'
+
+  input:
+  path input_files from ch_collected_for_rasta
+  path blockSizes from ch_linecounts_for_rasta
+
+  output:
+  path('rasta.m*.txt')
+
+  script:
+  """
+  ${baseDir}/ras_to_rasta.py ${params.max_ras_ac} ${blockSizes} ${input_files}
   """
 }
