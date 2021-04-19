@@ -5,3 +5,4 @@ results/
 scripts/work/
 scripts/.nextflow*
 .Rproj.user
+.Rhistory
