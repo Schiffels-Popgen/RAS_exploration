@@ -141,15 +141,14 @@ Another useful analysis could be to test for cladality of two test individuals (
 
 ## RASwave - Generalization of RAS_ReferenceF4
 
-As a generalization of RAS_ReferenceF4 we can consider the entire RAS-table from above to perform a cladality test via a Chi-squared test. Specifically, we can ask the question whether two rows in the table share the same "histogram" of RAS values with all the reference populations. So consider two test samples $i$ and $j$, and their entire "rows" of RAS values $\text{RAS}_k(i, m)$ and $\text{RAS}_k(i, m)$, with $m=1\ldots n_P$, then one can construct a chi-square test to compare those two rows. Specifically, one would calculate
+As a generalization of RAS_ReferenceF4 we can consider not just pairs of RAS values but pairs of rows of the RAS-table from above to perform a cladality test via a Chi-squared test. Specifically, we can ask the question whether two rows in the table share the same "histogram" of RAS values across the reference populations. So consider two test samples $i$ and $j$, and their entire "rows" of RAS values $\text{RAS}_k(i, m)$ and $\text{RAS}_k(j, m)$, with $m=1\ldots n_P$, then one can construct a chi-square test to compare those two rows. Specifically, one would calculate
 
 $$
-  \chi^2 = \sum_m^{n_P}\left(
-    \frac{\text{RAS}_k(i, m) - \text{RAS}_k(j, m)}
-    {\sqrt{\Delta\text{RAS}_k(i, m)^2 + \Delta\text{RAS}_k(j, m)^2}}
-  \right)^2
+  \chi^2 = \sum_m^{n_P}
+    \frac{(\text{RAS}_k(i, m) - \text{RAS}_k(j, m))^2}
+    {\Delta\text{RAS}_k(i, m)^2 + \Delta\text{RAS}_k(j, m)^2}
 $$
-where $\Delta\text{RAS}_k(\cdot, m)$ is the jackknife standard error, and the denominator essentially rescales the observed differences between the two statistics in the numerator with the expected standard error of that difference.
+where $\Delta\text{RAS}_k(\cdot, m)$ is the jackknife standard error, and the denominator essentially rescales the observed differences between the two statistics in the numerator with the squared expected standard error of that difference.
 
 Under the null-hypothesis, we expect $\chi^2$ to be chi-squared distributed with $n_P$ degrees of freedom, so a standard tail test will yield a p-value for that null-hypothesis.
 
@@ -157,11 +156,50 @@ As an even further generalization, we can try to test for more complex cases wit
 
 ## RASadm - Admixture decomposition based on RAS with reference populations
 
+Finally, we can also try and decompose one row in the RAS-table as a linear combination of multiple other rows in that table. This would then be interpreteable as an ancestry decomposition in an admixture scenario.
+
+Specifically, we can formulate a linear model for one focal individual or population $i=1$ to be decomposed into $n_T-1$ source individuals or populations $i=2,3,4\ldots$. In vector notation, and taking $n_T=4$ as an example, this would in principle look like this:
+
+$$
+  RAS_k(1, \cdot) = \alpha\, \text{RAS}_k(2, \cdot) + \beta\,\text{RAS}_k(3, \cdot) + \gamma\,\text{RAS}_k(4, \cdot)
+$$
+
+where $\text{RAS}_k(i, \cdot)$ denotes a column vector across all reference populations $m=1\ldots n_P$, and $\alpha$, $\beta$ and $\gamma$ are the mixture coefficients. However, we of course have a constraint that $\alpha+\beta+\gamma=1$, so we need to express that somehow. Indeed, we can write then
+
+$$
+  RAS_k(1, \cdot) = \alpha\, \text{RAS}_k(2, \cdot) + \beta\,\text{RAS}_k(3, \cdot) + (1-\alpha-\beta)\,\text{RAS}_k(4, \cdot)
+$$
+
+which ultimately can be rewritten as
+$$
+  RAS_k(1, \cdot) - RAS_k(4, \cdot) = \alpha\, (\text{RAS}_k(2, \cdot) - \text{RAS}_k(4, \cdot)) + \beta\,(\text{RAS}_k(3, \cdot) - \text{RAS}_k(4, \cdot))
+$$
+
+This is nothing else than an ordinary linear fit, and we can employ standard least-squared techniques to get estimates for $\alpha$ and $\beta$, and can report goodness-of-fit statistics again by chi-squared tests. I will formulate this out later.
+
 ## Exploration via real data
+
+We can explore these asymmetric methods using a subset of HGDP as reference dataset and the 19 ancient British samples from [@Schiffels2016-in] and [@Martiniano2016-iy].
+
+Basically, we can construct our RAS-table using the 19 ancient individuals, together with 2 modern samples of each of French, English, German, Danish if those exist and then some suitably grouped dataset of Western Eurasian HGDP, perhaps with 10-20 reference groups.
+
+We can then first explore RAS_ReferencePCA with this dataset, so plotting the 19 ancients plus some modern individuals using PCA based on their RAS-table. We should compare this with the same table using Outgroup-F3 instead of RAS.
+
+We can then also perform simple RAS-F4 and RASwave stats using this asymmetric setup, for example trying to test cladality of Iron Age, early and middle Anglo-Saxon samples.
+
+RASadm could be used to decompose modern English as a mixture of Iron Age English + early Anglo-Saxon plus a little bit of French (see Joscha's project and compare with this models).
 
 # Implementation Details {#implementation-details}
 
-## File Formats
+I see as the core work-horse the python program RASCalculator, which can take genotype data and produce lists of pairwise RAS together with error bars. A typical workflow would start with this tool and essentially produce a RAS-table (either symmetric or asymmetric) together with error estimates for each cell.
+
+We then need additional tools for RAS-f4 (which I think exists, called RASDA) and RASwave and RASadm. These tools would essentially take a RAS-table as input.
+
+The core file format to work with genotype data would be the PLINK format. In the past we also had Freqsum, but I think we should switch to PLINK which is more compact and more flexible (it's not grouped).
+
+So I think we need to change the internal handling of RASCalculator to read in PLINK data and produce pairwise RAS values and error bars (or perhaps even per chromosome as Jackknife blocks?). 
+
+... to be continued.
 
 ## Tools
 
