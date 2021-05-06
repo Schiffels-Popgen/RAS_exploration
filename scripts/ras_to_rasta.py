@@ -75,7 +75,11 @@ def calculate_group_sharing(ras_data_by_ac,pops, inds_per_pop):
 def convert_ras_to_rasta(ras_data_by_ac, grouped_ras_by_ac, pops, inds_per_pop, n_sites, blockSizes_dict):
     rasta_by_ac = {}
     for m,ras_data in ras_data_by_ac.items():
-        rasta_table = ras_data.apply(
+        ## Each row of the matrix gets duplicated 9 times to keep the rasta value vs each of the 9 populations
+        rasta_table = pd.concat([ras_data]*9)
+        ## Column Versus will point to the population against whom the rasta is calculated.  
+        rasta_table["Versus"]=["Pop"+str(_) for _ in np.repeat(list(range(9)), 9*inds_per_pop)]
+        rasta_table = rasta_table.apply(
             assign_pop_label,
             axis=1, 
             pops=pops
@@ -85,7 +89,7 @@ def convert_ras_to_rasta(ras_data_by_ac, grouped_ras_by_ac, pops, inds_per_pop, 
             grouped_ras=grouped_ras_by_ac[m], 
             inds_per_pop=inds_per_pop
            )
-        rasta_table = pivot_rasta_table(rasta_table, n_sites, chrom, blockSizes_dict)
+        rasta_table = pivot_rasta_table(rasta_table, n_sites,chrom, blockSizes_dict)
         rasta_by_ac[m] = rasta_table
     return (rasta_by_ac)
 
@@ -93,24 +97,30 @@ def convert_ras_to_rasta(ras_data_by_ac, grouped_ras_by_ac, pops, inds_per_pop, 
 ## Should be applied rowwise to the labelled ras_data 
 def calculate_rasta(labelled_ras_row, grouped_ras, inds_per_pop):
     true_pop = labelled_ras_row["Group"]
-    group_sharing = grouped_ras.loc[true_pop]
-    ## In order to get the sharing that the group would have without that 1 individual, we need to multiply the sharing by inds_per_pop, subtract the individual and multiply by n-1
-    row_rasta = (labelled_ras_row - (inds_per_pop * group_sharing))/(inds_per_pop-1)
+    versus_pop = labelled_ras_row["Versus"]
+#     print ( "true: {}\nversus: {}".format(true_pop, versus_pop))
+    if versus_pop == true_pop:
+        ## In order to get the sharing that the group would have without that 1 individual, we need to multiply the sharing by inds_per_pop, subtract the individual and multiply by n-1
+        group_sharing = (inds_per_pop * grouped_ras.loc[versus_pop])/(inds_per_pop-1)
+    else:
+        group_sharing = grouped_ras.loc[versus_pop]
+    row_rasta = labelled_ras_row - group_sharing
+    row_rasta.Versus = versus_pop
     return(row_rasta.drop("Group"))
 
 ## Make RASTA table into long format
 def pivot_rasta_table(rasta_df, n_sites, chrom, blockSizes_dict):
     ## Add pop groups and make IndA into a column
-    rasta_df = rasta_df.apply(assign_pop_label, axis=1, pops=pops).reset_index()
+    rasta_df = rasta_df.reset_index()
     ## Convert to long format data
-    rasta_df = pd.melt(rasta_df, id_vars=["IndA","Group"], value_name="RASTA",
+    rasta_df = pd.melt(rasta_df, id_vars=["IndA","Versus"], value_name="RASTA",
                        value_vars=["Pop0", "Pop1","Pop2","Pop3","Pop4","Pop5","Pop6","Pop7","Pop8"])
     ## Add uniform nSites & Ref column, rename columns so f4 equivalence is clearer
     rasta_df["nSites"] = n_sites
     rasta_df["Chrom"] = chrom
     rasta_df["blockSize"] = blockSizes_dict[chrom]
     rasta_df["Ref"] = "Ref"
-    rasta_df = rasta_df.rename(columns={"IndA":"Ind","Group":"PopA","IndB":"PopB"})
+    rasta_df = rasta_df.rename(columns={"IndA":"Ind","Versus":"PopA","IndB":"PopB"})
     ## Return the dataframe with column order tweaked to make more legible
     return(rasta_df[["Ind","PopA","PopB","Ref","RASTA","nSites", "Chrom", "blockSize"]])
 
@@ -202,7 +212,7 @@ blockSizes_dict = {}
 for line in open(blockSizes_file, 'r'):
   fields = line.strip().split()
   chrom = fields[0].split("_")[-1].split(".")[0].lstrip("chr")
-  blockSizes_dict[chrom] = int(fields[1])-1
+  blockSizes_dict[chrom] = int(fields[1])-1 ## Do not count header of freqsum file.
 
 ## Initialise final dict
 rasta_results_per_chrom={}
@@ -224,6 +234,7 @@ dfs_to_concat = []
 
 ## rasta_table is { ac : RASTA } for each chromosome
 for ac in range (2,max_af+1):
+  dfs_to_concat = []
   for rasta_table in rasta_results_per_chrom.values():
     ## Make a list with all the dfs that should be concatenated. More efficient than appending to a df in a for loop.
     dfs_to_concat.append(rasta_table[ac])
