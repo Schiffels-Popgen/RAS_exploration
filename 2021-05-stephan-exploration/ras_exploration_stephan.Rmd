@@ -1,0 +1,53 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r include=FALSE}
+library(magrittr)
+library(ggplot2)
+```
+
+
+Loading all chromosomes into one gigantic dataframe...
+```{r message=FALSE}
+load_chrom <- function(chr) {
+  fn <- paste0("~/Data_tmp/MICROSCOPE/2021-05-ras-sim/rare_m10.0_chr", chr, ".out")
+  readr::read_tsv(fn, comment = "#") %>% dplyr::mutate(chrom = chr)
+}
+ras_dat <- 1:20 %>% purrr::map_dfr(~load_chrom(.))
+```
+
+... with 972,000 rows
+```{r}
+ras_dat
+```
+
+Let's look at three samples: `ind0` and `ind1` from `pop0` and `ind10` from `pop1`:
+
+```{r}
+get_ras_blocks <- function(ras_dat, A, B, mode = "Total [2,5]") {
+  ras_dat %>%
+    dplyr::filter(TestPop == A & LeftPop == B & AlleleCount == mode) %>%
+    dplyr::pull(RAS)
+}
+ras_0_1 <- get_ras_blocks(ras_dat, "ind0", "ind1")
+ras_0_10 <- get_ras_blocks(ras_dat, "ind0", "ind10")
+rasf4 <- ras_0_1 - ras_0_10
+f3_0_1 <- get_ras_blocks(ras_dat, "ind0", "ind1", "Outgroup F3")
+f3_0_10 <- get_ras_blocks(ras_dat, "ind0", "ind10", "Outgroup F3")
+f4 <- f3_0_1 - f3_0_10
+```
+
+Where we have for our rasF4 blocks Z score of
+```{r}
+rasf4
+mean(rasf4) / sd(rasf4)
+```
+
+and for the Outgroup F3
+```{r}
+f4
+mean(f4) / sd(f4)
+```
+
