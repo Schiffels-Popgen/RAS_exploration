@@ -131,6 +131,7 @@ process make_poplists {
   output:
   path("pairwise_poplist.*.txt") into ch_pairwise_poplists_f3
   file("pairwise_poplist.txt")
+  file("rasta_setups.txt") into ch_rasta_setups_for_rasta
 
   script:
   num_inds = params.n_ind_per_pop * 9 - 1
@@ -154,6 +155,17 @@ process make_poplists {
     sed -n -e \${start_line},\${end_line}p pairwise_poplist.txt > pairwise_poplist.\${start_line}.txt
     let start_line=\$(expr \${end_line} + 1)
   done
+  
+  ## Make the rasta setups file
+  for i in \$(seq 0 1 ${num_inds}); do
+    for popB in \$(seq 0 1 8); do
+      for popC in \$(seq 0 1 8); do
+        if [[ \$popB != \$popA]]; then
+          echo -e "ind\$i\tPop\$popB\tPop\$popC"
+        fi
+      done
+    done
+  done >rasta_setups.txt
   """
 }
 
@@ -426,10 +438,10 @@ process freqsum_lineCount {
 ch_ras_for_rasta
     .map { it [2] }
     .collect()
-/*    .dump(tag:"ras2rasta")*/
+    .dump(tag:"ras2rasta")
     .set { ch_collected_for_rasta }
 
-process make_rasta{
+/*process make_rasta{
   tag "m${params.four_mN}_l${params.chrom_length}"
   publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/rasta", mode: 'copy'
   memory '8GB'
@@ -444,5 +456,23 @@ process make_rasta{
   script:
   """
   ${baseDir}/ras_to_rasta.py ${params.max_ras_ac} ${blockSizes} ${input_files}
+  """
+}*/
+
+process make_rasta{
+  tag "m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/rasta", mode: 'copy'
+  memory '8GB'
+  
+  input:
+  path input_files from ch_collected_for_rasta
+  path rasta_setups_file from ch_rasta_setups_for_rasta
+  
+  output:
+  path('rasta_out.m*.txt')
+  
+  script:
+  """
+  ${baseDir}/ras_to_rasta.R ${rasta_setups_file} 20 ${params.max_ras_ac} ${params.n_ind_per_pop} rare_m${params.four_mN}_chr .out
   """
 }
