@@ -6,7 +6,7 @@ load_chrom <- function(prefix,chr,suffix) {
 
 ## Save output into files depending on AC
 save_output <- function(prefix, ac, suffix, data) {
-  fn <- paste(prefix, stringr::str_replace(ac," ","_"), suffix, sep=".")
+  fn <- paste0(prefix, stringr::str_replace(ac," ","_"), suffix)
   readr::write_tsv(data %>% dplyr::filter(AlleleCount == ac), fn)
 }
 

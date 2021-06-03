@@ -64,4 +64,4 @@ for (ac in c(2:max_ac, "Outgroup F3")) {
 }
 
 ## Save output to files by AC
-c(2:max_ac, "Outgroup F3") %>% purrr::map(~save_output("rasta_out", .,"txt", rasta_dat))
+c(2:max_ac, "Outgroup F3") %>% purrr::map(~save_output("rasta_out.m", .,".txt", rasta_dat))
