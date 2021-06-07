@@ -160,7 +160,7 @@ process make_poplists {
   for i in \$(seq 0 1 ${num_inds}); do
     for popB in \$(seq 0 1 8); do
       for popC in \$(seq 0 1 8); do
-        if [[ \$popB != \$popA]]; then
+        if [[ \$popB != \$popA ]]; then
           echo -e "ind\$i\tPop\$popB\tPop\$popC"
         fi
       done
