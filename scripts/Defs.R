@@ -193,3 +193,66 @@ calculate_rasta <- function(data, A, B, C) {
     dplyr::mutate(rasta=((!!A-!!B)/`NumSites`))
   rasta_dat
 }
+
+## Function to load rasta outputs
+load_rasta <- function(prefix, x, suffix) {
+  fn <- paste0(prefix,x,suffix)
+  readr::read_tsv(fn, col_types='cccdddc')
+}
+
+## Function to categorise the type of RASTA in the rasta output, for plotting by category.
+categorise_rasta <- function(data, n_ind_per_pop = 10) {
+  
+  ## Hard-coded neighbour list for each population
+  neighbours <- list(
+    "Pop0"=c("Pop1","Pop3"), 
+    "Pop1"=c("Pop0","Pop2","Pop4"),
+    "Pop2"=c("Pop1","Pop5"),
+    "Pop3"=c("Pop0","Pop4","Pop6"),
+    "Pop4"=c("Pop1","Pop3","Pop5","Pop7"),
+    "Pop5"=c("Pop2","Pop4","Pop8"),
+    "Pop6"=c("Pop3","Pop7"),
+    "Pop7"=c("Pop4","Pop6","Pop8"),
+    "Pop8"=c("Pop5","Pop7")
+    )
+  
+  ## Infer the list of non-neighbour populations for each population. Excludes the population itself.
+  others <- list()
+  for (i in names(neighbours)) {
+    all_pops <- paste0("Pop",0:8)
+    others[[i]]=all_pops[!all_pops %in% neighbours[[i]] & all_pops != i]
+  }
+  
+  ## Make tibble of real populations for each individual
+  x <- c(paste0("ind",c(0:(n_ind_per_pop*9-1))))
+  y <- rep(all_pops, each=n_ind_per_pop)
+  same_pop <- tibble::tibble(ind=x,pop=y)
+  
+  ## Categorise the type of rasta in a new column of type factor. The levels can be reordered to create the desired plot.
+  data <- data %>% dplyr::left_join(same_pop, by=c("A"="ind")) %>%
+    dplyr::rename("truePopA"=pop) %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(
+      Type=dplyr::case_when(
+        B == truePopA & C == truePopA ~ "rasta(ind, same; same, Ref)",
+        B %in% neighbours[[truePopA]] & C %in% neighbours[[truePopA]] ~ "rasta(ind, neighbour; neighbour, Ref)",
+        B %in% others[[truePopA]] & C %in% others[[truePopA]] ~ "rasta(ind, other; other, Ref)",
+        B %in% neighbours[[truePopA]] & C %in% others[[truePopA]] ~ "rasta(ind, neighbour; other, Ref)",
+        B == truePopA ~ "rasta(ind, same; any, Ref)",
+        C == truePopA ~ "rasta(ind, any; same, Ref)", 
+        C %in% neighbours[[truePopA]] ~ "rasta(ind, other; neighbour, Ref)",
+        TRUE ~ "other" ## Catch-all clause. Not actually possible.
+        ), Type=factor(Type, levels=c(
+          "rasta(ind, same; same, Ref)", 
+          "rasta(ind, neighbour; neighbour, Ref)", 
+          "rasta(ind, other; other, Ref)", 
+          "rasta(ind, same; any, Ref)", 
+          "rasta(ind, any; same, Ref)", 
+          "rasta(ind, neighbour; other, Ref)", 
+          "rasta(ind, other; neighbour, Ref)", 
+          "other"
+          ))
+    ) %>% dplyr::select(-truePopA) ## Remove the true PopA column from the output.
+data
+  
+}
