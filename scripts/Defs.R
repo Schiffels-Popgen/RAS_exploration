@@ -243,13 +243,13 @@ categorise_rasta <- function(data, n_ind_per_pop = 10) {
         C %in% neighbours[[truePopA]] ~ "rasta(ind, other; neighbour, Ref)",
         TRUE ~ "other" ## Catch-all clause. Not actually possible.
         ), Type=factor(Type, levels=c(
-          "rasta(ind, same; same, Ref)", 
+          "rasta(ind, same; same, Ref)",
+          "rasta(ind, same; any, Ref)", 
           "rasta(ind, neighbour; neighbour, Ref)", 
           "rasta(ind, other; other, Ref)", 
-          "rasta(ind, same; any, Ref)", 
-          "rasta(ind, any; same, Ref)", 
           "rasta(ind, neighbour; other, Ref)", 
           "rasta(ind, other; neighbour, Ref)", 
+          "rasta(ind, any; same, Ref)", 
           "other"
           ))
     ) %>% dplyr::select(-truePopA) ## Remove the true PopA column from the output.
