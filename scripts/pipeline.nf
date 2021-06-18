@@ -463,6 +463,7 @@ process make_rasta{
   tag "m${params.four_mN}_l${params.chrom_length}"
   publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/rasta", mode: 'copy'
   memory '8GB'
+  cpus 8
   
   input:
   path input_files from ch_collected_for_rasta
@@ -473,6 +474,6 @@ process make_rasta{
   
   script:
   """
-  ${baseDir}/ras_to_rasta.R ${rasta_setups_file} 20 ${params.max_ras_ac} ${params.n_ind_per_pop} rare_m${params.four_mN}_chr .out
+  ${baseDir}/ras_to_rasta.R ${rasta_setups_file} 20 ${params.max_ras_ac} ${params.n_ind_per_pop} rare_m${params.four_mN}_chr .out 8
   """
 }
