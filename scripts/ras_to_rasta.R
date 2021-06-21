@@ -54,7 +54,7 @@ max_ac <- args[3]
 n_ind_per_pop <- as.integer(args[4])
 prefix <- args[5]
 suffix <- args[6]
-num_threads <- args[7]
+num_threads <- as.integer(args[7])
 
 
 ## Make parallel cluster
