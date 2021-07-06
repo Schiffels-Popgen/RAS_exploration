@@ -65,4 +65,4 @@ ggplot2::ggplot(rasta_data, ggplot2::aes(x=Type, y=Zscore)) +
                  axis.ticks.x = ggplot2::element_blank()) +
   ggplot2::facet_wrap(~AlleleCount, scales='free_x', nrow=1) 
 
-ggplot2::ggsave(paste0("Rasta_ZScore_plot_l",chrom_length,".pdf"), unit="cm", width=60, height=20)
+ggplot2::ggsave(paste0("Rasta_ZScore_plot_m",four_mn,"_l",chrom_length,".pdf"), unit="cm", width=60, height=20)
