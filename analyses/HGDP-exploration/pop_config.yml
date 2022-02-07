@@ -1,3 +1,14 @@
+groupDefs:
+  Basque2: Basque,!<HGDP01357>,!<HGDP01358>
+  BergamoItalian2: BergamoItalian,!<HGDP01149>,!<HGDP01151>
+  French2: French,!<HGDP00511>,!<HGDP00512>
+  Han2: Han,!<HGDP00774>,!<HGDP00775>
+  Karitiana2: Karitiana,!<HGDP00995>,!<HGDP00998>
+  Mbuti2: Mbuti,!<HGDP00449>,!<HGDP00450>
+  Orcadian2: Orcadian,!<HGDP00794>,!<HGDP00795>
+  Russian2: Russian,!<HGDP00879>,!<HGDP00880>
+  Sardinian2: Sardinian,!<HGDP00665>,!<HGDP00666>
+  Tuscan2: Tuscan,!<HGDP01161>,!<HGDP01162>
 popLefts:
 - <12880A>
 - <12881A>
@@ -18,8 +29,35 @@ popLefts:
 - <6DT3>
 - <M1489>
 - <NO3423>
+- <HGDP01357>
+- <HGDP01358>
+- <HGDP01149>
+- <HGDP01151>
+- <HGDP00511>
+- <HGDP00512>
+- <HGDP00774>
+- <HGDP00775>
+- <HGDP00995>
+- <HGDP00998>
+- <HGDP00449>
+- <HGDP00450>
+- <HGDP00794>
+- <HGDP00795>
+- <HGDP00879>
+- <HGDP00880>
+- <HGDP00665>
+- <HGDP00666>
+- <HGDP01161>
+- <HGDP01162>
 popRights:
-- Mbuti
-- Mixe
-- Spanish
-outgroup: <Chimp.REF>
+- Basque2
+- BergamoItalian2
+- French2
+- Han2
+- Karitiana2
+- Mbuti2
+- Orcadian2
+- Russian2
+- Sardinian2
+- Tuscan2
+outgroup: San
