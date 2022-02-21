@@ -7,3 +7,7 @@ ras_table %>% dplyr::filter(Cumulative==TRUE, k==5) %>% ggplot() +
   geom_errorbar(aes(x=Left, y=RAS, ymin=RAS-StdErr, ymax=RAS+StdErr, col=Right)) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
+ras_table %>% dplyr::filter(grepl("1????A", Left) & Cumulative & k==5 & Right=="BergamoItalian2") %>% ggplot() +
+  geom_errorbar(aes(x=Left, y=RAS, ymin=RAS-StdErr, ymax=RAS+StdErr)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
