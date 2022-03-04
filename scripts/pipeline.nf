@@ -497,9 +497,9 @@ process create_poseidon_packages {
   cpus 1
 
   input:
-  path genos ch_prepped_for_trident_geno.collect()
-  path snps ch_prepped_for_trident_snp.collect()
-  path ind ch_prepped_for_trident_ind.collect()
+  path genos from ch_prepped_for_trident_geno.collect()
+  path snps from ch_prepped_for_trident_snp.collect()
+  path ind from ch_prepped_for_trident_ind.collect()
 
   output:
   tuple path("all_vars/all_vars.geno"), path("all_vars/all_vars.snp"), path("all_vars/all_vars.ind"), path("all_vars/all_vars.janno"), path("all_vars/POSEIDON.yaml") into (ch_all_vars_poseidon_package)
