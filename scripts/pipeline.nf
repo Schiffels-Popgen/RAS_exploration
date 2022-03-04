@@ -491,10 +491,11 @@ ch_prepped_for_trident_snp=ch_all_vars_for_trident.snp
 ch_prepped_for_trident_ind=ch_all_vars_for_trident.ind
 
 process create_poseidon_packages {
-  tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
-  publishDir "${params.outdir}/data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/poseidon/all_vars", mode: 'copy'
-  memory '1GB'
+  tag "n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${params.outdir}/data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/poseidon", mode: 'copy'
+  memory '50MB'
   cpus 1
+  executor 'local'
 
   input:
   path genos from ch_prepped_for_trident_geno.collect()
@@ -502,7 +503,7 @@ process create_poseidon_packages {
   path ind from ch_prepped_for_trident_ind.collect()
 
   output:
-  tuple path("all_vars/all_vars.geno"), path("all_vars/all_vars.snp"), path("all_vars/all_vars.ind"), path("all_vars/all_vars.janno"), path("all_vars/POSEIDON.yaml") into (ch_all_vars_poseidon_package)
+  tuple path("all_vars/all_vars.geno"), path("all_vars/all_vars.snp"), path("all_vars/all_vars.ind"), path("all_vars/all_vars.janno"), path("all_vars/all_vars.bib"), path("all_vars/POSEIDON.yml") into (ch_all_vars_poseidon_package)
   tuple val("all"), val("rare_vars"), val(package_dir) into (ch_package_dir_for_xerxes)
 
   script:
@@ -515,7 +516,7 @@ process create_poseidon_packages {
   done
   cat \${geno_fn[@]} > all_vars.geno
   cat \${snp_fn[@]} > all_vars.snp
-  cp all_vars_m${params.four_mN}_chr\${i}.ind > all_vars.ind
+  cp all_vars_m${params.four_mN}_chr\${i}.ind all_vars.ind
 
   ## trident creates the package within the work directory, and nextflow is responsible for putting it in the data dir.
   ${params.poseidon_exec_dir}/trident init --inFormat EIGENSTRAT \
@@ -523,7 +524,7 @@ process create_poseidon_packages {
       --genoFile all_vars.geno \
       --snpFile all_vars.snp \
       --indFile all_vars.ind \
-      -o . \
+      -o all_vars \
       -n all_vars
   """
 }
