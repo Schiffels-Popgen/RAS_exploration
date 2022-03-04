@@ -479,9 +479,16 @@ process make_rasta{
 }
 
 // Create 3 subchannels with the geno, snp and ind files across all chromosomes for trident.
-ch_prepped_for_trident_geno=ch_all_vars_for_trident.map{ it[2] }
-ch_prepped_for_trident_snp=ch_all_vars_for_trident.map{ it[3] }
-ch_prepped_for_trident_ind=ch_all_vars_for_trident.map{ it[4] }
+ch_all_vars_for_trident = ch_all_vars_for_trident
+              .multiMap { it ->
+                geno: it [2]
+                snp: it [3]
+                ind: it [4]
+              }
+
+ch_prepped_for_trident_geno=ch_all_vars_for_trident.geno
+ch_prepped_for_trident_snp=ch_all_vars_for_trident.snp
+ch_prepped_for_trident_ind=ch_all_vars_for_trident.ind
 
 process create_poseidon_packages {
   tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
