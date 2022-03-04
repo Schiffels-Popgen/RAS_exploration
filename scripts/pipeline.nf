@@ -50,14 +50,14 @@ println ""
 process msprime{
   
   tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
-  publishDir "${params.outdir}/data/${params.chrom_length}/${params.four_mN}", mode: 'copy'
+  publishDir "${params.outdir}/data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}", mode: 'copy'
   memory '8GB'
   
   input:
   val chrom_name from Channel.of(1..20)
   
   output:
-  tuple val(chrom_name), val("all"), path("all_vars_m${params.four_mN}_chr${chrom_name}.geno"), path("all_vars_m${params.four_mN}_chr${chrom_name}.snp"), path("all_vars_m${params.four_mN}_chr${chrom_name}.ind"), path("all_vars_m${params.four_mN}_chr${chrom_name}.indEach") into (ch_all_vars_datasets)
+  tuple val(chrom_name), val("all"), path("all_vars_m${params.four_mN}_chr${chrom_name}.geno"), path("all_vars_m${params.four_mN}_chr${chrom_name}.snp"), path("all_vars_m${params.four_mN}_chr${chrom_name}.ind"), path("all_vars_m${params.four_mN}_chr${chrom_name}.indEach") into (ch_all_vars_datasets, ch_all_vars_for_trident)
   tuple val(chrom_name), val("common"), path("common_vars_m${params.four_mN}_chr${chrom_name}.geno"), path("common_vars_m${params.four_mN}_chr${chrom_name}.snp"), path("common_vars_m${params.four_mN}_chr${chrom_name}.ind"), path("common_vars_m${params.four_mN}_chr${chrom_name}.indEach") into (ch_common_vars_datasets, ch_for_1240k_input_geno, ch_for_1240k_input_snp, ch_for_1240k_input_ind, ch_for_1240k_input_indEach)
   tuple val(chrom_name), val("rare"), path("all_vars_m${params.four_mN}_chr${chrom_name}.freqsum.gz") into (ch_freqsum_dataset, ch_for_linecount)
 /*  tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.geno") into ch_all_vars_geno_for_f3
@@ -89,7 +89,7 @@ ch_common_vars_indEach_for_1240k=ch_for_1240k_input_indEach.map{ it[5] }
 process make_1240k{
 
   tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
-  publishDir "${params.outdir}/data/${params.chrom_length}/${params.four_mN}", mode: 'copy'
+  publishDir "${params.outdir}/data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}", mode: 'copy'
   memory '1GB'
 
   input:
@@ -125,7 +125,7 @@ process make_1240k{
 process make_poplists {
 
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/f3/poplists", mode: 'copy'
+  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/f3/poplists", mode: 'copy'
   memory '1GB'
 
   output:
@@ -183,7 +183,7 @@ ch_f3_input = ch_all_vars_datasets
 process f3 {
 //  conda 'bioconda::admixtools=6.0' // Added directly to environment.yml.
   tag "${variant_set}_chr${chrom_name}_m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/f3", mode: 'copy'
+  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/f3", mode: 'copy'
   memory '8GB'
 
   input:
@@ -215,7 +215,7 @@ ch_f3_output
 
 process compile_F3_matrix {
   tag "${variant_set}_f3_matrix"
-  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
+  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
   memory '8GB'
 
   input:
@@ -232,7 +232,7 @@ process compile_F3_matrix {
 
 process run_Rascal {
   tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/ras", mode: 'copy'
+  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/ras", mode: 'copy'
   memory '8GB'
   cpus 2
 
@@ -271,7 +271,7 @@ ch_ras_output_for_matrix
 
 process compile_ras_matrix {
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
+  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
   memory '8GB'
 
   input:
@@ -296,7 +296,7 @@ ch_eigenstrat_similarity_matrices
 
 process convert_to_distance_matrix{
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/distance_matrices", mode: 'copy'
+  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/distance_matrices", mode: 'copy'
   memory '8GB'
 
   input:
@@ -336,7 +336,7 @@ ch_similarity_matrices_for_Heatmap
 
 process do_MDS {
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/plots/${params.chrom_length}/MDS/", mode: 'copy'
+  publishDir "${params.outdir}/plots/n${params.n_ind_per_pop}/${params.chrom_length}/MDS/", mode: 'copy'
   memory '8GB'
   
   input:
@@ -353,7 +353,7 @@ process do_MDS {
 
 process do_Heatmap {
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/plots/${params.chrom_length}/Heatmaps/", mode: 'copy'
+  publishDir "${params.outdir}/plots/n${params.n_ind_per_pop}/${params.chrom_length}/Heatmaps/", mode: 'copy'
   memory '8GB'
 //  time '10m'
   
@@ -371,7 +371,7 @@ process do_Heatmap {
 
 process do_KNN {
   tag "m${params.four_mN}_${snp_set}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/KNN_classification", mode: 'copy'
+  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/KNN_classification", mode: 'copy'
   memory '8GB'
 //  time '10m'
   
@@ -390,14 +390,14 @@ process do_KNN {
 
 /* Create a channel that picks up all KNN results from the same chrom_length regardless of four_mN value. 
   In that channel, mix the dummy delay channel and fiter for unique files to avoid any duplications. */
-ch_for_KNN_plotting=Channel.fromPath("${params.outdir}/results/${params.chrom_length}/*/KNN_classification/KNN_K${params.knn}*.txt")
+ch_for_KNN_plotting=Channel.fromPath("${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/*/KNN_classification/KNN_K${params.knn}*.txt")
           .mix(ch_dummy_plotting_delay)
           .unique()
 /*          .dump(tag:"for KNN Plot")*/
 
 process plot_KNN {
   tag "l${params.chrom_length}"
-  publishDir "${params.outdir}/plots/${params.chrom_length}/KNN_classification/", mode: 'copy'
+  publishDir "${params.outdir}/plots/n${params.n_ind_per_pop}/${params.chrom_length}/KNN_classification/", mode: 'copy'
   memory '8GB'
 //  time '10m'
 
@@ -417,7 +417,7 @@ ch_prepped_for_linecount=ch_for_linecount.map{ it[2] }
 
 process freqsum_lineCount {
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/data/${params.chrom_length}/${params.four_mN}", mode: 'copy'
+  publishDir "${params.outdir}/data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}", mode: 'copy'
   memory '1GB'
 
   input:
@@ -443,7 +443,7 @@ ch_ras_for_rasta
 
 /*process make_rasta{
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/rasta", mode: 'copy'
+  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/rasta", mode: 'copy'
   memory '8GB'
 
   input:
@@ -461,7 +461,7 @@ ch_ras_for_rasta
 
 process make_rasta{
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/${params.chrom_length}/${params.four_mN}/rasta", mode: 'copy'
+  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/rasta", mode: 'copy'
   memory '8GB'
   cpus 8
   
@@ -477,3 +477,64 @@ process make_rasta{
   ${baseDir}/ras_to_rasta.R ${rasta_setups_file} 20 ${params.max_ras_ac} ${params.n_ind_per_pop} rare_m${params.four_mN}_chr .out 8
   """
 }
+
+// Create 3 subchannels with the geno, snp and ind files across all chromosomes for trident.
+ch_prepped_for_trident_geno=ch_all_vars_for_trident.map{ it[2] }
+ch_prepped_for_trident_snp=ch_all_vars_for_trident.map{ it[3] }
+ch_prepped_for_trident_ind=ch_all_vars_for_trident.map{ it[4] }
+
+process create_poseidon_packages {
+  tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
+  publishDir "${params.outdir}/data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/poseidon/all_vars", mode: 'copy'
+  memory '1GB'
+  cpus 1
+
+  input:
+  path genos ch_prepped_for_trident_geno.collect()
+  path snps ch_prepped_for_trident_snp.collect()
+  path ind ch_prepped_for_trident_ind.collect()
+
+  output:
+  tuple path("all_vars/all_vars.geno"), path("all_vars/all_vars.snp"), path("all_vars/all_vars.ind"), path("all_vars/all_vars.janno"), path("all_vars/POSEIDON.yaml") into (ch_all_vars_poseidon_package)
+  tuple val("all"), val("rare_vars"), val(package_dir) into (ch_package_dir_for_xerxes)
+
+  script:
+  package_dir = "${params.outdir}/data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/poseidon/"
+  """
+  ## First concatenate the datasets in order
+  for i in {1..20}; do
+    geno_fn+=(all_vars_m${params.four_mN}_chr\${i}.geno)
+    snp_fn+=(all_vars_m${params.four_mN}_chr\${i}.snp)
+  done
+  cat \${geno_fn[@]} > all_vars.geno
+  cat \${snp_fn[@]} > all_vars.snp
+  cp all_vars_m${params.four_mN}_chr\${i}.ind > all_vars.ind
+
+  ## trident creates the package within the work directory, and nextflow is responsible for putting it in the data dir.
+  ${params.poseidon_exec_dir}/trident init --inFormat EIGENSTRAT \
+      --snpSet Other \
+      --genoFile all_vars.geno \
+      --snpFile all_vars.snp \
+      --indFile all_vars.ind \
+      -o . \
+      -n all_vars
+  """
+}
+
+// process run_xerxes {
+//   tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
+//   publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/ras", mode: 'copy'
+//   memory '8GB'
+//   cpus 2
+
+//   input:
+//   tuple chrom_name, variant_set, path(package_dir), from ch_package_dir_for_xerxes
+
+//   output:
+//   tuple chrom_name, variant_set, path("*.out") into (ch_xerxes_ras_output_for_matrix, ch_xerxes_ras_for_rasta)
+
+//   script: 
+//   """
+//   ${params.poseidon_exec_dir}/xerxes 
+//   """
+// }
