@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../../../../mnt/archgen/MICROSCOPE/rarevar_sim_study"
+		},
+		{
+			"path": "../../../poseidon-analysis-hs"
+		}
+	],
+	"settings": {}
+}

@@ -1,14 +1,14 @@
 groupDefs:
-  Basque2: Basque,!<HGDP01357>,!<HGDP01358>
-  BergamoItalian2: BergamoItalian,!<HGDP01149>,!<HGDP01151>
-  French2: French,!<HGDP00511>,!<HGDP00512>
-  Han2: Han,!<HGDP00774>,!<HGDP00775>
-  Karitiana2: Karitiana,!<HGDP00995>,!<HGDP00998>
-  Mbuti2: Mbuti,!<HGDP00449>,!<HGDP00450>
-  Orcadian2: Orcadian,!<HGDP00794>,!<HGDP00795>
-  Russian2: Russian,!<HGDP00879>,!<HGDP00880>
-  Sardinian2: Sardinian,!<HGDP00665>,!<HGDP00666>
-  Tuscan2: Tuscan,!<HGDP01161>,!<HGDP01162>
+  Basque2: Basque,-<HGDP01357>,-<HGDP01358>
+  BergamoItalian2: BergamoItalian,-<HGDP01149>,-<HGDP01151>
+  French2: French,-<HGDP00511>,-<HGDP00512>
+  Han2: Han,-<HGDP00774>,-<HGDP00775>
+  Karitiana2: Karitiana,-<HGDP00995>,-<HGDP00998>
+  Mbuti2: Mbuti,-<HGDP00449>,-<HGDP00450>
+  Orcadian2: Orcadian,-<HGDP00794>,-<HGDP00795>
+  Russian2: Russian,-<HGDP00879>,-<HGDP00880>
+  Sardinian2: Sardinian,-<HGDP00665>,-<HGDP00666>
+  Tuscan2: Tuscan,-<HGDP01161>,-<HGDP01162>
 popLefts:
 - <12880A>
 - <12881A>
