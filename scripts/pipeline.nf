@@ -528,20 +528,44 @@ process create_poseidon_packages {
   """
 }
 
-// process run_xerxes {
-//   tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
-//   publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/ras", mode: 'copy'
-//   memory '8GB'
-//   cpus 2
+process run_xerxes {
+  tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
+  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/xerxes_ras", mode: 'copy'
+  memory '8GB'
+  cpus 1
 
-//   input:
-//   tuple chrom_name, variant_set, path(package_dir), from ch_package_dir_for_xerxes
+  input:
+  tuple chrom_name, variant_set, path(package_dir), from ch_package_dir_for_xerxes
 
-//   output:
-//   tuple chrom_name, variant_set, path("*.out") into (ch_xerxes_ras_output_for_matrix, ch_xerxes_ras_for_rasta)
+  output:
+  tuple chrom_name, variant_set, path("*.out") into (ch_xerxes_ras_output_for_matrix, ch_xerxes_ras_for_rasta)
+  file "popConfigFile.txt"
 
-//   script: 
-//   """
-//   ${params.poseidon_exec_dir}/xerxes 
-//   """
-// }
+  script: 
+  """
+  ## Create population definitions file. Each pop consists of all but the last individual. The first individual of a pop is used as a left pop.
+  echo "groupDefs:" >popConfigFile.txt
+  leftpops=()
+  rightpops=()
+  for pop in {0..8}; do
+    excluded_ind='!ind'$((${params.n_ind_per_pop} * \${pop}))
+    echo -e "Pop\${pop}Rest=Pop\${pop},\${excluded_ind}" >>popConfigFile.txt
+    leftpops+=(\${excluded_ind#"!"}) ## Add excluded ind to lefts without the leading "!"
+    rightpops+=(Pop\${pop}Rest) ## Add created population into rights
+  done
+
+  ## Define rights and lefts
+  echo "leftPops:" >>popConfigFile.txt
+  for left in \${leftpops[@]}; do
+    echo "  - <\${left}>" >>popConfigFile.txt
+  done
+
+  echo "rightPops:" >>popConfigFile.txt
+  for rights in \${rightpops[@]}; do
+    echo "  - \${right}" >>popConfigFile.txt
+  done
+
+  ## Run ras
+  ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir} --popConfigFile popConfigFile.txt -j CHR -k 5 -f ras_table.out
+  """
+}
