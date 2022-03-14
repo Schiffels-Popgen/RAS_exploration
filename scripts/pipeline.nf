@@ -504,7 +504,7 @@ process create_poseidon_packages {
 
   output:
   tuple path("all_vars/all_vars.geno"), path("all_vars/all_vars.snp"), path("all_vars/all_vars.ind"), path("all_vars/all_vars.janno"), path("all_vars/all_vars.bib"), path("all_vars/POSEIDON.yml") into (ch_all_vars_poseidon_package)
-  tuple val("all"), val("rare_vars"), path("${params.outdir}/data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/poseidon/") into (ch_package_dir_for_xerxes)
+  tuple val("all"), val("rare_vars"), val(package_dir) into (ch_package_dir_for_xerxes)
 
   script:
   package_dir = "${params.outdir}/data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/poseidon/"
