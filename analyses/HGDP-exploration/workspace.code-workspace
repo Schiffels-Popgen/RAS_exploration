@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../../../poseidon-analysis-hs"
+		},
+		{
+			"path": "../../../poseidon-hs"
 		}
 	],
 	"settings": {}
