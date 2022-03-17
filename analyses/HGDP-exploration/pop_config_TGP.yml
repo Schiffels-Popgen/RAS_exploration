@@ -5,7 +5,7 @@ groupDefs:
   IBS2: IBS,-<HG02238>,-<HG02239>
   TSI2: TSI,-<NA20828>,-<NA20832>
   CHB2: CHB,-<NA18749>,-<NA18757>
-  YRI2: YRI,-<NA19256>,-<NA19257>
+  YRI2: YRI,-<NA19248>,-<NA19256>,-<NA19257>
   PEL2: PEL,-<HG02348>,-<HG02425>
 popLefts:
 - <12880A>
@@ -51,3 +51,4 @@ popRights:
 - TSI2
 - CHB2
 - YRI2
+outgroup: <NA19248>
