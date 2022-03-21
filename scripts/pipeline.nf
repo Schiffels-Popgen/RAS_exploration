@@ -224,7 +224,7 @@ process compile_F3_matrix {
 
   script:
   """
-  ${baseDir}/../f3_to_similarity_matrix.py ${params.n_ind_per_pop} ${variant_set}_similarity_matrix.txt ${f3_logs}
+  ${baseDir}/f3_to_similarity_matrix.py ${params.n_ind_per_pop} ${variant_set}_similarity_matrix.txt ${f3_logs}
   """
 }
 
@@ -281,7 +281,7 @@ process compile_ras_matrix {
   
   script:
   """
-  ${baseDir}/../ras_to_similarity_matrices.py ${params.max_ras_ac} ${ras_logs}
+  ${baseDir}/ras_to_similarity_matrices.py ${params.max_ras_ac} ${ras_logs}
   """
 }
 
@@ -305,7 +305,7 @@ process convert_to_distance_matrix{
 
   script:
   """
-  ${baseDir}/../similarity_to_distance.py ${variant_set} ${similarity_matrices}
+  ${baseDir}/similarity_to_distance.py ${variant_set} ${similarity_matrices}
   """
 }
 
@@ -345,7 +345,7 @@ process do_MDS {
 
   script:
   """
-  ${baseDir}/../distance_to_MDS_plot.py ${params.four_mN} ${params.n_ind_per_pop} ${distance_matrices}
+  ${baseDir}/distance_to_MDS_plot.py ${params.four_mN} ${params.n_ind_per_pop} ${distance_matrices}
   """
 }
 
@@ -363,7 +363,7 @@ process do_Heatmap {
 
   script:
   """
-  ${baseDir}/../similarity_to_heatmap.py ${params.four_mN} ${params.n_ind_per_pop} ${similarity_matrices}
+  ${baseDir}/similarity_to_heatmap.py ${params.four_mN} ${params.n_ind_per_pop} ${similarity_matrices}
   """
 }
 
@@ -382,7 +382,7 @@ process do_KNN {
 
   script:
   """
-  ${baseDir}/../distance_to_KNN.py ${params.four_mN} ${params.n_ind_per_pop} ${variant_set} ${params.knn} ${similarity_matrices}
+  ${baseDir}/distance_to_KNN.py ${params.four_mN} ${params.n_ind_per_pop} ${variant_set} ${params.knn} ${similarity_matrices}
   """
 }
 
@@ -407,7 +407,7 @@ process plot_KNN {
 
   script:
   """
-  ${baseDir}/../plot_KNN.py ${params.chrom_length} ${knn_files}
+  ${baseDir}/plot_KNN.py ${params.chrom_length} ${knn_files}
   """
 }
 
@@ -453,7 +453,7 @@ ch_ras_for_rasta
 
   script:
   """
-  ${baseDir}/../ras_to_rasta.py ${params.max_ras_ac} ${blockSizes} ${input_files}
+  ${baseDir}/ras_to_rasta.py ${params.max_ras_ac} ${blockSizes} ${input_files}
   """
 }*/
 
@@ -472,7 +472,7 @@ process make_rasta{
   
   script:
   """
-  ${baseDir}/../ras_to_rasta.R ${rasta_setups_file} 20 ${params.max_ras_ac} ${params.n_ind_per_pop} rare_m${params.four_mN}_chr .out 8
+  ${baseDir}/ras_to_rasta.R ${rasta_setups_file} 20 ${params.max_ras_ac} ${params.n_ind_per_pop} rare_m${params.four_mN}_chr .out 8
   """
 }
 
