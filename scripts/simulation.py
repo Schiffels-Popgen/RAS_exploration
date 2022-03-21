@@ -163,7 +163,7 @@ with open(outdir+"variant_counts.m{}_chr{}.txt".format(four_mN, chrom_name),'a')
 
 ## Export variants in eigenstrat format
 for variant_set_name in ["all_vars", "common_vars"]: ## Twelve_forty will be made later.
-    variant_set_genos=eval(variant_set_name)
+    variant_set_genos=abs(eval(variant_set_name)-2) ## Eigenstrat counts Ref (i.e. ancestral) alleles, so the counting needs to be flipped.
     variant_set_positions=eval(variant_set_name.replace("vars","positions"))
     ## Export simulated eigenstrat geno file for testing with qp3Pop
     np.savetxt(outdir+variant_set_name+"_m{}_chr{}.geno".format(four_mN, chrom_name), variant_set_genos, delimiter='', fmt="%d")
