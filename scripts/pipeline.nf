@@ -564,6 +564,8 @@ process run_xerxes {
     echo "  - \${right}" >>popConfigFile.txt
   done
 
+  echo "outgroup: <Ref>" >>popConfigFile.txt
+
   ## Run ras
   ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir} --popConfigFile popConfigFile.txt -j CHR -k 5 -f ras_table.out
   """
