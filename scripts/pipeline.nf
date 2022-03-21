@@ -70,8 +70,8 @@ process msprime{
   
   script:
   """
-  ${baseDir}/../simulation.py -c ${params.chrom_length} -n ${chrom_name} -s ${params.n_ind_per_pop} -m ${params.four_mN} #-o /projects1/MICROSCOPE/rarevar_sim_study/data/
-  ${baseDir}/../add_ref_and_sort_eigenstrat.sh ${chrom_name} ${params.four_mN} .
+  ${baseDir}/simulation.py -c ${params.chrom_length} -n ${chrom_name} -s ${params.n_ind_per_pop} -m ${params.four_mN} #-o /projects1/MICROSCOPE/rarevar_sim_study/data/
+  ${baseDir}/add_ref_and_sort_eigenstrat.sh ${chrom_name} ${params.four_mN} .
   """
 }
 
