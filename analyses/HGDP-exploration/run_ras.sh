@@ -39,15 +39,15 @@ qsub -b y -cwd -l h_vmem=16G xerxes ras -d $POS_ANCIENT -d $POS_MODERN \
   -j 100000 --noMinFreq --maxFreq 0.05 --popConfigFile pop_config_TGP.yml \
   -f AncientBritish_1000G_ras05.table.txt
 qsub -b y -cwd -l h_vmem=16G xerxes ras -d $POS_ANCIENT -d $POS_MODERN \
-  -j 100000 --noMinFreq --maxFreq 0.1 --popConfigFile pop_config_TGP.yml 
+  -j 100000 --noMinFreq --maxFreq 0.1 --popConfigFile pop_config_TGP.yml \
   -f AncientBritish_1000G_ras10.table.txt
 qsub -b y -cwd -l h_vmem=16G xerxes ras -d $POS_ANCIENT -d $POS_MODERN \
-  -j 100000 --noMinFreq --maxFreq 0.2 --popConfigFile pop_config_TGP.yml 
+  -j 100000 --noMinFreq --maxFreq 0.2 --popConfigFile pop_config_TGP.yml \
   -f AncientBritish_1000G_ras20.table.txt
 qsub -b y -cwd -l h_vmem=16G xerxes ras -d $POS_ANCIENT -d $POS_MODERN \
-  -j 100000 --noMinFreq --noMaxFreq --popConfigFile pop_config_TGP.yml 
+  -j 100000 --noMinFreq --noMaxFreq --popConfigFile pop_config_TGP.yml \
   -f AncientBritish_1000G_rasAll.table.txt
 qsub -b y -cwd -l h_vmem=16G xerxes ras -d $POS_ANCIENT -d $POS_MODERN \
-  -j 100000 --minFreq 0.05 --maxFreq 0.95 --popConfigFile pop_config_TGP.yml 
+  -j 100000 --minFreq 0.05 --maxFreq 0.95 --popConfigFile pop_config_TGP.yml \
   -f AncientBritish_1000G_rasCommon.table.txt
 
