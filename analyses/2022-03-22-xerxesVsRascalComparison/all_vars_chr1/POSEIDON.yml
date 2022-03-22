@@ -8,7 +8,7 @@ packageVersion: 0.1.0
 lastModified: 2022-03-21
 genotypeData:
   format: EIGENSTRAT
-  genoFile: all_vars_m1.0_chr1.geno
+  genoFile: all_vars_m1.0_chr1.recoded.geno
   snpFile: all_vars_m1.0_chr1.snp
   indFile: all_vars_m1.0_chr1.ind
   snpSet: Other
