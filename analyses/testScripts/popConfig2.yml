@@ -1,0 +1,16 @@
+groupDefs:
+  CEU2: CEU.SG,-<NA12889.SG>,-<NA12890.SG>
+  YRI2: YRI.SG,-<NA19257.SG>
+popLefts:
+- <NA12889.SG>
+popRights:
+- CEU2
+- FIN.SG
+- GBR.SG
+- IBS.SG
+- TSI.SG
+- CHS.SG
+- JPT.SG
+- PEL.SG
+- YRI2
+outgroup: <Chimp.REF>

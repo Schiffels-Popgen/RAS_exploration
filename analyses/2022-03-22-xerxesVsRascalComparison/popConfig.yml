@@ -1,0 +1,30 @@
+groupDefs:
+  Pop0a: Pop0,-<ind0>
+  Pop1a: Pop1,-<ind10>
+  Pop2a: Pop2,-<ind20>
+  Pop3a: Pop3,-<ind30>
+  Pop4a: Pop4,-<ind40>
+  Pop5a: Pop5,-<ind50>
+  Pop6a: Pop6,-<ind60>
+  Pop7a: Pop7,-<ind70>
+  Pop8a: Pop8,-<ind80>
+popLefts:
+- <ind0>
+- <ind10>
+- <ind20>
+- <ind30>
+- <ind40>
+- <ind50>
+- <ind60>
+- <ind70>
+- <ind80>
+popRights:
+- Pop0a
+- Pop1a
+- Pop2a
+- Pop3a
+- Pop4a
+- Pop5a
+- Pop6a
+- Pop7a
+- Pop8a

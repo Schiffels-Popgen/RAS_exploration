@@ -1,0 +1,16 @@
+poseidonVersion: 2.5.0
+title: all_vars_chr1
+description: Empty package template. Please add a description
+contributor:
+- name: John Doe
+  email: john@doe.net
+packageVersion: 0.1.0
+lastModified: 2022-03-21
+genotypeData:
+  format: EIGENSTRAT
+  genoFile: all_vars_m1.0_chr1.geno
+  snpFile: all_vars_m1.0_chr1.snp
+  indFile: all_vars_m1.0_chr1.ind
+  snpSet: Other
+jannoFile: all_vars_chr1.janno
+bibFile: all_vars_chr1.bib
