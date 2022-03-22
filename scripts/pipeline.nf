@@ -9,12 +9,10 @@ def helpMessage() {
 
   The typical command for running the pipeline on sdag is as follows:
 
-  nextflow run pipeline.nf -profile conda,shh,sdag --4mN 1 --chrom_length 1e6 --n_ind_per_pop 20
+  nextflow run pipeline.nf -profile conda,shh,sdag --four_mN 1 --chrom_length 1e6 --n_ind_per_pop 20 --max_ras_ac 5 --knn 5
 
   Mandatory arguments:
       -profile [str]          Institution or personal hardware config to use (e.g. standard, docker, singularity, conda, aws). Ask your system admin if unsure, or check documentation.
-
-      --outdir [str]          The desired directory within which all output files will be placed. Subdirectories `data/<chrom_length>/<four_mN>` and `results/<chrom_length>/<four_mN>` will be created within this directory.
 
       --four_mN [float]           The scaled migration rate between non-diagonal neighbour populations used in the simulation.
 
@@ -50,7 +48,7 @@ println ""
 process msprime{
   
   tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
-  publishDir "${params.outdir}/data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}", mode: 'copy'
+  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}", mode: 'copy'
   memory '8GB'
   
   input:
@@ -89,7 +87,7 @@ ch_common_vars_indEach_for_1240k=ch_for_1240k_input_indEach.map{ it[5] }
 process make_1240k{
 
   tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
-  publishDir "${params.outdir}/data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}", mode: 'copy'
+  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}", mode: 'copy'
   memory '1GB'
 
   input:
@@ -125,7 +123,7 @@ process make_1240k{
 process make_poplists {
 
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/f3/poplists", mode: 'copy'
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/f3/poplists", mode: 'copy'
   memory '1GB'
 
   output:
@@ -183,7 +181,7 @@ ch_f3_input = ch_all_vars_datasets
 process f3 {
 //  conda 'bioconda::admixtools=6.0' // Added directly to environment.yml.
   tag "${variant_set}_chr${chrom_name}_m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/f3", mode: 'copy'
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/f3", mode: 'copy'
   memory '8GB'
 
   input:
@@ -215,7 +213,7 @@ ch_f3_output
 
 process compile_F3_matrix {
   tag "${variant_set}_f3_matrix"
-  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
   memory '8GB'
 
   input:
@@ -232,7 +230,7 @@ process compile_F3_matrix {
 
 process run_Rascal {
   tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/ras", mode: 'copy'
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/ras", mode: 'copy'
   memory '8GB'
   cpus 2
 
@@ -271,7 +269,7 @@ ch_ras_output_for_matrix
 
 process compile_ras_matrix {
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
   memory '8GB'
 
   input:
@@ -296,7 +294,7 @@ ch_eigenstrat_similarity_matrices
 
 process convert_to_distance_matrix{
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/distance_matrices", mode: 'copy'
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/distance_matrices", mode: 'copy'
   memory '8GB'
 
   input:
@@ -336,7 +334,7 @@ ch_similarity_matrices_for_Heatmap
 
 process do_MDS {
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/plots/n${params.n_ind_per_pop}/${params.chrom_length}/MDS/", mode: 'copy'
+  publishDir "${baseDir}/../plots/n${params.n_ind_per_pop}/${params.chrom_length}/MDS/", mode: 'copy'
   memory '8GB'
   
   input:
@@ -353,7 +351,7 @@ process do_MDS {
 
 process do_Heatmap {
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/plots/n${params.n_ind_per_pop}/${params.chrom_length}/Heatmaps/", mode: 'copy'
+  publishDir "${baseDir}/../plots/n${params.n_ind_per_pop}/${params.chrom_length}/Heatmaps/", mode: 'copy'
   memory '8GB'
 //  time '10m'
   
@@ -371,7 +369,7 @@ process do_Heatmap {
 
 process do_KNN {
   tag "m${params.four_mN}_${snp_set}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/KNN_classification", mode: 'copy'
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/KNN_classification", mode: 'copy'
   memory '8GB'
 //  time '10m'
   
@@ -390,14 +388,14 @@ process do_KNN {
 
 /* Create a channel that picks up all KNN results from the same chrom_length regardless of four_mN value. 
   In that channel, mix the dummy delay channel and fiter for unique files to avoid any duplications. */
-ch_for_KNN_plotting=Channel.fromPath("${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/*/KNN_classification/KNN_K${params.knn}*.txt")
+ch_for_KNN_plotting=Channel.fromPath("${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/*/KNN_classification/KNN_K${params.knn}*.txt")
           .mix(ch_dummy_plotting_delay)
           .unique()
 /*          .dump(tag:"for KNN Plot")*/
 
 process plot_KNN {
   tag "l${params.chrom_length}"
-  publishDir "${params.outdir}/plots/n${params.n_ind_per_pop}/${params.chrom_length}/KNN_classification/", mode: 'copy'
+  publishDir "${baseDir}/../plots/n${params.n_ind_per_pop}/${params.chrom_length}/KNN_classification/", mode: 'copy'
   memory '8GB'
 //  time '10m'
 
@@ -417,7 +415,7 @@ ch_prepped_for_linecount=ch_for_linecount.map{ it[2] }
 
 process freqsum_lineCount {
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}", mode: 'copy'
+  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}", mode: 'copy'
   memory '1GB'
 
   input:
@@ -443,7 +441,7 @@ ch_ras_for_rasta
 
 /*process make_rasta{
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/rasta", mode: 'copy'
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/rasta", mode: 'copy'
   memory '8GB'
 
   input:
@@ -461,7 +459,7 @@ ch_ras_for_rasta
 
 process make_rasta{
   tag "m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/rasta", mode: 'copy'
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/rasta", mode: 'copy'
   memory '8GB'
   cpus 8
   
@@ -492,7 +490,7 @@ ch_prepped_for_trident_ind=ch_all_vars_for_trident.ind
 
 process create_poseidon_packages {
   tag "n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${params.outdir}/data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/poseidon", mode: 'copy'
+  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/poseidon", mode: 'copy'
   memory '50MB'
   cpus 1
   executor 'local'
@@ -507,7 +505,7 @@ process create_poseidon_packages {
   tuple val("all"), val("rare_vars"), val(package_dir) into (ch_package_dir_for_xerxes)
 
   script:
-  package_dir = "${params.outdir}/data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/poseidon/"
+  package_dir = "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/poseidon/"
   """
   ## First concatenate the datasets in order
   for i in {1..20}; do
@@ -530,13 +528,13 @@ process create_poseidon_packages {
 }
 
 process run_xerxes {
-  tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
-  publishDir "${params.outdir}/results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/xerxes_ras", mode: 'copy'
+  tag "n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/xerxes_ras", mode: 'copy'
   memory '8GB'
   cpus 1
 
   input:
-  tuple chrom_name, variant_set, path(package_dir) from ch_package_dir_for_xerxes
+  tuple chrom_name, variant_set, val(package_dir) from ch_package_dir_for_xerxes
 
   output:
   tuple chrom_name, variant_set, path("*.out") into (ch_xerxes_ras_output_for_matrix, ch_xerxes_ras_for_rasta)
@@ -550,21 +548,23 @@ process run_xerxes {
   rightpops=()
   for pop in {0..8}; do
     excluded_ind='!ind'\$((${params.n_ind_per_pop} * \${pop}))
-    echo -e "Pop\${pop}Rest=Pop\${pop},\${excluded_ind}" >>popConfigFile.txt
+    echo -e "  Pop\${pop}Rest: Pop\${pop},\${excluded_ind}" >>popConfigFile.txt
     leftpops+=(\${excluded_ind#"!"}) ## Add excluded ind to lefts without the leading "!"
     rightpops+=(Pop\${pop}Rest) ## Add created population into rights
   done
 
   ## Define rights and lefts
-  echo "leftPops:" >>popConfigFile.txt
+  echo "popLefts:" >>popConfigFile.txt
   for left in \${leftpops[@]}; do
     echo "  - <\${left}>" >>popConfigFile.txt
   done
 
-  echo "rightPops:" >>popConfigFile.txt
-  for rights in \${rightpops[@]}; do
+  echo "popRights:" >>popConfigFile.txt
+  for right in \${rightpops[@]}; do
     echo "  - \${right}" >>popConfigFile.txt
   done
+
+  echo "outgroup: <Ref>" >>popConfigFile.txt
 
   ## Run ras
   ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir} --popConfigFile popConfigFile.txt -j CHR -k 5 -f ras_table.out
