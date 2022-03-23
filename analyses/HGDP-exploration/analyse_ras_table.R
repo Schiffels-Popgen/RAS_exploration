@@ -1,28 +1,17 @@
 library(magrittr)
 library(ggplot2)
 
-ras_table <- readr::read_tsv("analyses/HGDP-exploration/AncientBritish_HGDP_ras.table.txt")
+read_ras_table <- function(full_filename) {
+  fn <- basename(full_filename)
+  m <- stringr::str_match(fn, "AncientBritish_(HGDP|1000G)_ras([0-9A-Za-z]+).table.txt")
+  dataset <- m[2]
+  af <- m[3]
+  readr::read_tsv(full_filename, col_types="ccidd") %>%
+    dplyr::mutate(dataset = dataset, rasAF = af)
+}
 
-# Complete view
-ras_table %>% dplyr::filter(Cumulative==TRUE, k==5) %>% ggplot() +
-  geom_errorbar(aes(x=Left, y=RAS, ymin=RAS-StdErr, ymax=RAS+StdErr, col=Right)) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+ras_table <- list.files("analyses/HGDP-exploration", pattern = "^AncientBritish", full.names=TRUE) %>%
+  purrr::map_dfr(~read_ras_table(.))
+  
+  readr::read_tsv("analyses/HGDP-exploration/AncientBritish_HGDP_ras.table.txt")
 
-# One left vs multiple right
-ras_table %>% dplyr::filter(Cumulative & k==2 & Left=="<12881A>") %>% ggplot() +
-  geom_errorbar(aes(x=Right, y=RAS, ymin=RAS-StdErr, ymax=RAS+StdErr)) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-
-# one right vs multiple left
-ras_table %>% dplyr::filter(Cumulative & k==2 & Right=="French2") %>% ggplot() +
-  geom_errorbar(aes(x=Left, y=RAS, ymin=RAS-StdErr, ymax=RAS+StdErr)) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-
-# vs allele freq
-ras_table %>% dplyr::filter(grepl("1????A", Left) & !Cumulative & Right=="French2") %>% ggplot() +
-  geom_errorbar(aes(x=k, y=RAS, ymin=RAS-StdErr, ymax=RAS+StdErr, col=Left)) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-
-ras_table %>% dplyr::filter(!Cumulative & Left=="<12881A>") %>% ggplot() +
-  geom_errorbar(aes(x=k, y=RAS, ymin=RAS-StdErr, ymax=RAS+StdErr, col=Right)) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
