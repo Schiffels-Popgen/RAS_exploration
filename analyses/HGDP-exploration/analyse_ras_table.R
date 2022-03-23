@@ -12,6 +12,14 @@ read_ras_table <- function(full_filename) {
 
 ras_table <- list.files("analyses/HGDP-exploration", pattern = "^AncientBritish", full.names=TRUE) %>%
   purrr::map_dfr(~read_ras_table(.))
-  
-  readr::read_tsv("analyses/HGDP-exploration/AncientBritish_HGDP_ras.table.txt")
+
+ras_table %>% dplyr::filter(dataset == "1000G" & rasAF == "Common" & grepl("<?????A>", Left)) %>%
+  dplyr::select(Left, Right, RAS, StdErr) %>%
+  tidyr::pivot_wider(names_from = Right, values_from = c(RAS, StdErr)) %>%
+  dplyr::mutate(
+    ratio = RAS_FIN2 / RAS_IBS2,
+    ratioErr = sqrt((StdErr_FIN2 / RAS_IBS2) ^ 2 + (StdErr_IBS2 * RAS_FIN2 / (RAS_IBS2^2))^2)
+  ) %>% dplyr::select(Left, ratio, ratioErr) %>%
+  ggplot(aes(x = Left, y = ratio)) + geom_point()
+    # geom_errorbar(aes(ymin = ratio - ratioErr, ymax = ratio + ratioErr))
 
