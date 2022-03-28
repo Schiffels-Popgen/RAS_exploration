@@ -112,5 +112,43 @@ ggplot(umap_dat, aes(x = V1, y = V2, col = Group)) + geom_point()
 
 
 # Checking F4-values
+inds <- ras_table %>% dplyr::filter(dataset == "1000G") %>% dplyr::pull(Left) %>% unique()
+rasAF <- ras_table %>% dplyr::filter(dataset == "1000G") %>% dplyr::pull(rasAF) %>% unique()
+rasf4_table <- tidyr::expand_grid(Left1 = inds, Left2 = inds, rasAF = rasAF) %>%
+  dplyr::mutate(dataset = "1000G") %>%
+  dplyr::filter(Left1 != Left2) %>%
+  dplyr::left_join(ras_table, by = c("Left1" = "Left", "dataset" = "dataset", "rasAF" = "rasAF")) %>%
+  dplyr::rename(Norm1 = Norm, RAS1 = RAS, StdErr1 = StdErr, Group1 = Group) %>%
+  dplyr::left_join(ras_table, by = c("Left2" = "Left", "dataset" = "dataset", "rasAF" = "rasAF", "Right" = "Right")) %>%
+  dplyr::rename(Norm2 = Norm, RAS2 = RAS, StdErr2 = StdErr, Group2 = Group) %>%
+  dplyr::mutate(
+    f4name = paste0("RAS-F4(", Left1, ", ", Left2, ", ", Right, ", Outgroup)"),
+    rasF4 = RAS1 - RAS2,
+    rasF4err = sqrt(StdErr1^2 + StdErr2^2),
+    rasF4Z = rasF4 / rasF4err
+  )
 
+rasf4_table %>%
+  dplyr::filter(!(Group1 %in% c("AncientBritish", "YRI", "CHB", "PEL")),
+                !(Group2 %in% c("AncientBritish", "YRI", "CHB", "PEL"))) %>%
+  ggplot(aes(x = rasAF, y = abs(rasF4Z))) +
+  geom_jitter(width=0.25)
+ggsave("analyses/HGDP-exploration/rasF4_1000G_modernOnly.pdf")
 
+rasf4_table %>%
+  dplyr::filter(!(Group1 %in% c("AncientBritish", "YRI", "CHB", "PEL")),
+                !(Group2 %in% c("AncientBritish", "YRI", "CHB", "PEL")),
+                abs(rasF4Z) > 3) %>%
+  dplyr::group_by(rasAF) %>% dplyr::summarise(dplyr::n())
+  
+rasf4_table %>%
+  dplyr::filter(Group1 == "AncientBritish" & Group2 == "AncientBritish") %>%
+  ggplot(aes(x = rasAF, y = abs(rasF4Z))) +
+  geom_jitter(width=0.25)
+ggsave("analyses/HGDP-exploration/rasF4_1000G_ancientsOnly.pdf")
+
+rasf4_table %>%
+  dplyr::filter(Group1 == "AncientBritish" & Group2 == "AncientBritish") %>%
+  dplyr::filter(abs(rasF4Z) >= 3) %>%
+  dplyr::group_by(rasAF) %>%
+  dplyr::summarise(nr_significant = dplyr::n())
