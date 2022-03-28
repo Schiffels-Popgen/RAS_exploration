@@ -67,15 +67,27 @@ ras_table %>% dplyr::filter(dataset == "1000G" & rasAF == "01" & !(Right %in% c(
 
 ggsave("sanalyses/HGDP-exploration/scatter_plot_1000G_ras01.pdf", plot1)
 
-# plot2 <-
-ras_table %>% dplyr::filter(dataset == "1000G" & rasAF == "Common" & !(Right %in% c("CHB2", "YRI2")) &
-                                       !(Group %in% c("YRI", "CHB", "PEL", "FIN"))) %>%
+# No Fin plot
+ras_table %>% dplyr::filter(dataset == "1000G" & rasAF == "01" & !(Right %in% c("CHB2", "YRI2")) &
+                              !(Group %in% c("YRI", "CHB", "PEL", "FIN"))) %>%
   dplyr::select(Left, Group, Right, RAS, StdErr) %>%
   ggplot(aes(x = Left, y = RAS, col = Group)) + geom_point() +
   geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr)) +
   facet_wrap(~Right) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-ggsave("analyses/HGDP-exploration/scatter_plot_1000G_ras01_noFin.pdf", plot2)
+
+# Saving all noFin plots
+for(freq in c("01", "02", "05", "10", "20", "All", "Common")) {
+  plot <- ras_table %>% dplyr::filter(dataset == "1000G" & rasAF == freq & !(Right %in% c("CHB2", "YRI2")) &
+                                !(Group %in% c("YRI", "CHB", "PEL", "FIN"))) %>%
+    dplyr::select(Left, Group, Right, RAS, StdErr) %>%
+    ggplot(aes(x = Left, y = RAS, col = Group)) + geom_point() +
+    geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr)) +
+    facet_wrap(~Right) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  fn <- paste0("analyses/HGDP-exploration/scatter_plot_1000G_ras", freq, "_noFin.pdf")
+  ggsave(fn, plot)
+}
 
 
 # Playing with PCA and Umap, but isn't really useful
@@ -100,3 +112,5 @@ ggplot(umap_dat, aes(x = V1, y = V2, col = Group)) + geom_point()
 
 
 # Checking F4-values
+
+
