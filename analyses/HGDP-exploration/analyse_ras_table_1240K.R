@@ -76,8 +76,10 @@ for(freq in c("01", "02", "05", "10", "20", "All", "Common")) {
   ggsave(fn, plot)
 }
 
-# Checking coverage dependency
 # Checking dependency on Coverage
 ras_table %>%
-  dplyr::filter(dataset == "1000G" & rasAF == "Common") %>%
-  ggplot() + geom_point(aes(x = Norm, y = RAS, col = Right))
+  dplyr::filter(dataset == "1000G" & rasAF == "All" & Group == "AncientBritish" &
+                  Right != "YRI2" & Right != "CHB2") %>%
+  ggplot(aes(x = Norm, y = RAS, col = Right)) + geom_point() +
+  geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr))
+ggsave("analyses/HGDP-exploration/coverage_dependence_1240K.pdf")
