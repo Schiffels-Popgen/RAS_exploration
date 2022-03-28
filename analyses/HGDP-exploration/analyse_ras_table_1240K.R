@@ -63,3 +63,15 @@ ras_table %>% dplyr::filter(dataset == "1000G" & rasAF == "05" & !(Right %in% c(
   geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr)) +
   facet_wrap(~Right) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+for(freq in c("01", "02", "05", "10", "20", "All", "Common")) {
+  plot <- ras_table %>% dplyr::filter(dataset == "1000G" & rasAF == freq & !(Right %in% c("CHB2", "YRI2")) &
+                                        !(Group %in% c("YRI", "CHB", "PEL"))) %>%
+    dplyr::select(Left, Group, Right, RAS, StdErr) %>%
+    ggplot(aes(x = Left, y = RAS, col = Group)) + geom_point() +
+    geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr)) +
+    facet_wrap(~Right) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  fn <- paste0("analyses/HGDP-exploration/scatter_plot_1000G_1240K_ras", freq, ".pdf")
+  ggsave(fn, plot)
+}
