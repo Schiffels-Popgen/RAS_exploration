@@ -1,7 +1,7 @@
 library(magrittr)
 library(ggplot2)
 
-pat <- "AncientBritish_(HGDP|1000G)_ras([0-9A-Za-z]+).table.txt"
+pat <- "AncientBritish_(HGDP|1000G)_ras([0-9A-Za-z]+)_TVonly.table.txt"
 
 popNames <- tibble::tribble(
   ~Left, ~Group,
@@ -56,7 +56,6 @@ read_ras_table <- function(full_filename) {
 ras_table <- list.files("analyses/HGDP-exploration", pattern = pat, full.names=TRUE) %>%
   purrr::map_dfr(~read_ras_table(.))
 
-#plot1 <-
 ras_table %>% dplyr::filter(dataset == "1000G" & rasAF == "01" & !(Right %in% c("CHB2", "YRI2")) &
                               !(Group %in% c("YRI", "CHB", "PEL"))) %>%
   dplyr::select(Left, Group, Right, RAS, StdErr) %>%
@@ -65,7 +64,7 @@ ras_table %>% dplyr::filter(dataset == "1000G" & rasAF == "01" & !(Right %in% c(
   facet_wrap(~Right) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
-ggsave("sanalyses/HGDP-exploration/scatter_plot_1000G_ras01.pdf", plot1)
+ggsave("sanalyses/HGDP-exploration/scatter_plot_1000G_ras01_tvOnly.pdf", plot1)
 
 # No Fin plot
 ras_table %>% dplyr::filter(dataset == "1000G" & rasAF == "01" & !(Right %in% c("CHB2", "YRI2")) &
@@ -85,37 +84,9 @@ for(freq in c("01", "02", "05", "10", "20", "All", "Common")) {
     geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr)) +
     facet_wrap(~Right) +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-  fn <- paste0("analyses/HGDP-exploration/scatter_plot_1000G_ras", freq, "_noFin.pdf")
+  fn <- paste0("analyses/HGDP-exploration/scatter_plot_1000G_ras", freq, "_TVonly_noFin.pdf")
   ggsave(fn, plot)
 }
-
-# Checking dependency on Coverage
-ras_table %>%
-  dplyr::filter(dataset == "1000G" & rasAF == "All" & Group == "AncientBritish" &
-                  Right != "YRI2" & Right != "CHB2") %>%
-  ggplot(aes(x = Norm, y = RAS, col = Right)) + geom_point() +
-  geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr))
-ggsave("analyses/HGDP-exploration/coverage_dependence.pdf")
-
-# Playing with PCA and Umap, but isn't really useful
-leftRight <- ras_table %>% dplyr::filter(dataset == "1000G" & rasAF == "01" & !(Right %in% c("CHB2", "YRI2")) &
-                              !(Group %in% c("YRI", "CHB", "PEL", "FIN"))) %>%
-  dplyr::select(Left, Group, Right, RAS) %>%
-  tidyr::pivot_wider(names_from = Right, values_from = RAS)
-ind_names <- leftRight$Left
-group_names <- leftRight$Group
-mat <- dplyr::select(leftRight, -c(Left, Group)) %>% as.matrix() %>% t()
-pca <- prcomp(mat)
-pca_dat <- tibble::as.tibble(pca$rotation) %>%
-  dplyr::mutate(Ind = ind_names, Group = group_names)
-
-ggplot(pca_dat, aes(x = PC1, y = PC2, col = Group)) + geom_point()
-
-umap_obj <- umap::umap(t(mat))
-umap_dat <- tibble::as.tibble(umap_obj$layout) %>%
-  dplyr::mutate(Ind = ind_names, Group = group_names)
-  
-ggplot(umap_dat, aes(x = V1, y = V2, col = Group)) + geom_point()
 
 
 # Checking F4-values
@@ -136,26 +107,21 @@ rasf4_table <- tidyr::expand_grid(Left1 = inds, Left2 = inds, rasAF = rasAF) %>%
   )
 
 rasf4_table %>%
-  dplyr::filter(!(Group1 %in% c("AncientBritish", "YRI", "CHB", "PEL")),
-                !(Group2 %in% c("AncientBritish", "YRI", "CHB", "PEL"))) %>%
-  ggplot(aes(x = rasAF, y = abs(rasF4Z))) +
-  geom_jitter(width=0.25)
-ggsave("analyses/HGDP-exploration/rasF4_1000G_modernOnly.pdf")
-
-rasf4_table %>%
-  dplyr::filter(!(Group1 %in% c("AncientBritish", "YRI", "CHB", "PEL")),
-                !(Group2 %in% c("AncientBritish", "YRI", "CHB", "PEL")),
-                abs(rasF4Z) > 3) %>%
-  dplyr::group_by(rasAF) %>% dplyr::summarise(dplyr::n())
-  
-rasf4_table %>%
   dplyr::filter(Group1 == "AncientBritish" & Group2 == "AncientBritish") %>%
   ggplot(aes(x = rasAF, y = abs(rasF4Z))) +
   geom_jitter(width=0.25)
-ggsave("analyses/HGDP-exploration/rasF4_1000G_ancientsOnly.pdf")
+ggsave("analyses/HGDP-exploration/rasF4_1000G_ancientsOnly_tvOnly.pdf")
 
 rasf4_table %>%
   dplyr::filter(Group1 == "AncientBritish" & Group2 == "AncientBritish") %>%
   dplyr::filter(abs(rasF4Z) >= 3) %>%
   dplyr::group_by(rasAF) %>%
   dplyr::summarise(nr_significant = dplyr::n())
+
+# Checking Coverage dependence
+ras_table %>%
+  dplyr::filter(dataset == "1000G" & rasAF == "All" & Group == "AncientBritish" &
+                Right != "YRI2" & Right != "CHB2") %>%
+  ggplot(aes(x = Norm, y = RAS, col = Right)) + geom_point() +
+  geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr))
+ggsave("analyses/HGDP-exploration/coverage_dependence_tvOnly.pdf")
