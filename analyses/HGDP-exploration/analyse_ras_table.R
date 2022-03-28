@@ -56,23 +56,27 @@ read_ras_table <- function(full_filename) {
 ras_table <- list.files("analyses/HGDP-exploration", pattern = pat, full.names=TRUE) %>%
   purrr::map_dfr(~read_ras_table(.))
 
-plot1 <- ras_table %>% dplyr::filter(dataset == "1000G" & rasAF == "01" & !(Right %in% c("CHB2", "YRI2")) &
+#plot1 <-
+ras_table %>% dplyr::filter(dataset == "1000G" & rasAF == "01" & !(Right %in% c("CHB2", "YRI2")) &
                               !(Group %in% c("YRI", "CHB", "PEL"))) %>%
   dplyr::select(Left, Group, Right, RAS, StdErr) %>%
   ggplot(aes(x = Left, y = RAS, col = Group)) + geom_point() +
   geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr)) +
   facet_wrap(~Right) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-ggsave("sanalyses/HGDP-exploration/catter_plot_ras01.pdf", plot1)
 
-plot2 <- ras_table %>% dplyr::filter(dataset == "1000G" & rasAF == "01" & !(Right %in% c("CHB2", "YRI2")) &
+ggsave("sanalyses/HGDP-exploration/scatter_plot_1000G_ras01.pdf", plot1)
+
+# plot2 <-
+ras_table %>% dplyr::filter(dataset == "1000G" & rasAF == "Common" & !(Right %in% c("CHB2", "YRI2")) &
                                        !(Group %in% c("YRI", "CHB", "PEL", "FIN"))) %>%
   dplyr::select(Left, Group, Right, RAS, StdErr) %>%
   ggplot(aes(x = Left, y = RAS, col = Group)) + geom_point() +
   geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr)) +
   facet_wrap(~Right) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-ggsave("analyses/HGDP-exploration/scatter_plot_ras01_noFin.pdf", plot2)
+ggsave("analyses/HGDP-exploration/scatter_plot_1000G_ras01_noFin.pdf", plot2)
+
 
 # Playing with PCA and Umap, but isn't really useful
 leftRight <- ras_table %>% dplyr::filter(dataset == "1000G" & rasAF == "01" & !(Right %in% c("CHB2", "YRI2")) &
@@ -93,3 +97,6 @@ umap_dat <- tibble::as.tibble(umap_obj$layout) %>%
   dplyr::mutate(Ind = ind_names, Group = group_names)
   
 ggplot(umap_dat, aes(x = V1, y = V2, col = Group)) + geom_point()
+
+
+# Checking F4-values
