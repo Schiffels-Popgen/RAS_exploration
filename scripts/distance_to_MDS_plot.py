@@ -25,20 +25,20 @@ def do_mds(dm, m, population_colours, num_dim = 2, num_inds_per_pop = 20):
 
     for snp_set,matrix in dm.items():
         x_2d[snp_set]=pcoa(matrix, number_of_dimensions = num_dim)
-        add_subplot(plot_column[snp_set], x_2d[snp_set], snp_set, m, population_colours)
+        add_subplot(plot_column[snp_set], x_2d[snp_set], snp_set, m, population_colours, num_inds_per_pop)
     legend_elements = [Line2D([0], [0], marker='o', color='w', label="Pop"+str(pop),
                               markerfacecolor=population_colours["Pop"+str(pop)], markersize=10) for pop in range(9)]
     lgd=f.legend(handles=legend_elements, loc='right',bbox_to_anchor=(1.00, 0.5), prop={"size":14})
     f.savefig(output_plot, bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 ## Function to add the given data to a specific subplot with the correct annotations
-def add_subplot(ax, x_2d, snp_set, m, population_colours):
+def add_subplot(ax, x_2d, snp_set, m, population_colours, num_inds_per_pop):
 #     ax.set(aspect='equal')
     ax.axis('equal')
     ax.set_xlabel("Coordinate 1")
     ax.set_ylabel("Coordinate 2")
     ax.scatter(x_2d.samples["PC1"],x_2d.samples["PC2"], 
-                c=np.repeat(list(population_colours.values()), 10),
+                c=np.repeat(list(population_colours.values()), num_inds_per_pop),
                alpha=0.5)
     ax.title.set_text("{} Variants (m={})".format(snp_set.capitalize(), m))
     
