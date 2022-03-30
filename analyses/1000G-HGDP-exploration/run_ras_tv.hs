@@ -21,14 +21,22 @@ main = do
             print cmd
             stdout (inshell cmd empty)
     sh $ do
-        (afStr, af) <- select [("01", 0.01), ("02", 0.02), ("05", 0.05), ("10", 0.1), ("20", 0.2)]
-        liftIO . process $ format ("qsub -V -b y -cwd -l h_vmem=16G xerxes ras -d "%fp%" -d "%fp%
-            " -j 100000 --noTransitions --noMinFreq --maxFreq "%f%" --popConfigFile pop_config_TGP.yml "%
-            "-f AncientBritish_1000G_ras"%s%"_TVonly.table.txt") pos_ancient pos_modern af afStr
-    process $ format ("qsub -V -b y -cwd -l h_vmem=16G xerxes ras -d "%fp%" -d "%fp%
-        " -j 100000 --noTransitions --noMinFreq --noMaxFreq --popConfigFile pop_config_TGP.yml "%
-        "-f AncientBritish_1000G_rasAll_TVonly.table.txt") pos_ancient pos_modern
-    process $ format ("qsub -V -b y -cwd -l h_vmem=16G xerxes ras -d "%fp%" -d "%fp%
-        " -j 100000 --noTransitions --minFreq 0.05 --maxFreq 0.95 --popConfigFile pop_config_TGP.yml "%
-        "-f AncientBritish_1000G_rasCommon_TVonly.table.txt") pos_ancient pos_modern
+        afStr <- select ["01", "02", "05", "10", "20", "Common", "All"]
+        let mapMasked = True
+        -- mapMasked <- select [False, True]
+        let afCond = case afStr of
+                "01"     -> "--noMinFreq    --maxFreq 0.01"
+                "02"     -> "--noMinFreq    --maxFreq 0.02"
+                "05"     -> "--noMinFreq    --maxFreq 0.05"
+                "10"     -> "--noMinFreq    --maxFreq 0.1"
+                "20"     -> "--noMinFreq    --maxFreq 0.2"
+                "Common" -> "--minFreq 0.95 --maxFreq 0.05"
+                "All"    -> "--noMinFreq    --noMaxFreq"
+        let bedOpt = if mapMasked then
+                "--bedFile <(gzip -cd /mnt/454/HCNDCAM/Hengs_Alignability_Filter/hs37m_filt35_99.bed.gz) " else " "
+        let bedStr = if mapMasked then "mapMasked_" else ""
+        liftIO . process $ format ("qsub -V -b y -cwd -l h_vmem=16G \"xerxes ras -d "%fp%" -d "%fp%
+            " -j 100000 --noTransitions "%s%" --popConfigFile pop_config_TGP.yml "%s%
+            "-f AncientBritish_1000G_ras"%s%"_TVonly"%s%".table.txt\"") pos_ancient pos_modern afCond bedOpt afStr bedStr
+
   
