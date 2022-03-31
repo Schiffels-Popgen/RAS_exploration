@@ -539,6 +539,7 @@ process run_xerxes {
   output:
   tuple chrom_name, variant_set, path("*.out") into (ch_xerxes_ras_output_for_matrix, ch_xerxes_ras_for_rasta)
   file "popConfigFile.txt"
+  file "blockTableFile.txt"
 
   script: 
   """
@@ -567,6 +568,13 @@ process run_xerxes {
   echo "outgroup: <Ref>" >>popConfigFile.txt
 
   ## Run ras
-  ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir} --popConfigFile popConfigFile.txt -j CHR -k 5 -f ras_table.out
+  ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir} \
+    --popConfigFile popConfigFile.txt \
+    --minAC 2 \
+    --maxAC ${params.max_ras_ac} \
+    -j CHR \
+    -k 5 \
+    -f ras_table.out \
+    --blockTableFile blockTableFile.txt
   """
 }
