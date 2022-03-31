@@ -1,0 +1,51 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{R header, message=FALSE, include=FALSE}
+library(magrittr)
+library(ggplot2)
+source("load_data.R")
+```
+
+# Scatter Plots {.tabset}
+
+```{R scatter plots}
+tgp_scatter_plot <- function(rasAF_, TF_, tvOnly_, mapMasked_, excludeLefts = c("YRI", "CHB", "PEL")) {
+  ras_table %>% dplyr::filter(dataset == "1000G" & TF == TF_ & rasAF == rasAF_ & tvOnly == tvOnly_ & mapMasked == mapMasked_ &
+                                !(Right %in% c("CHB2", "YRI2")) & !(Group %in% excludeLefts)) %>%
+    dplyr::select(Left, Group, Right, RAS, StdErr) %>%
+    ggplot(aes(x = Left, y = RAS, col = Group)) + geom_point() +
+    geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr)) +
+    facet_wrap(~Right) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+}
+```
+
+## Up to 1% AF
+```{R}
+tgp_scatter_plot("01", FALSE, TRUE, TRUE)
+```
+
+and without the Finnish samples:
+```{R}
+tgp_scatter_plot("01", F, T, T, c("YRI", "CHB", "PEL", "FIN"))
+```
+
+## Up to 10% AF
+```{R}
+tgp_scatter_plot("10", FALSE, TRUE, TRUE)
+```
+
+## All Variants
+```{R}
+tgp_scatter_plot("All", FALSE, TRUE, TRUE)
+```
+
+## Common Variants (5% < AF < 95%)
+```{R}
+tgp_scatter_plot("Common", FALSE, TRUE, TRUE)
+```
+
+# Other analyses
