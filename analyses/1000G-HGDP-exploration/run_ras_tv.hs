@@ -15,6 +15,9 @@ pos_ancient = data_dir </> "ancient/ancientBritish/1000g/poseidon"
 pos_modern :: FilePath
 pos_modern = data_dir </> "modern/1000G/plink/poseidon/all_vars"
 
+bed_file :: FilePath
+bed_file = "/mnt/archgen/users/schiffels/hs37m_filt35_99.bed"
+
 main :: IO ()
 main = do
     let process cmd = do
@@ -33,10 +36,10 @@ main = do
                 "Common" -> "--minFreq 0.95 --maxFreq 0.05"
                 "All"    -> "--noMinFreq    --noMaxFreq"
         let bedOpt = if mapMasked then
-                "--bedFile <(gzip -cd /mnt/454/HCNDCAM/Hengs_Alignability_Filter/hs37m_filt35_99.bed.gz) " else " "
-        let bedStr = if mapMasked then "mapMasked_" else ""
-        liftIO . process $ format ("qsub -V -b y -cwd -l h_vmem=16G \"xerxes ras -d "%fp%" -d "%fp%
+                format ("--bedFile "%fp%" ") bed_file else " "
+        let bedStr = if mapMasked then "_mapMasked" else ""
+        liftIO . process $ format ("qsub -V -b y -cwd -l h_vmem=16G xerxes ras -d "%fp%" -d "%fp%
             " -j 100000 --noTransitions "%s%" --popConfigFile pop_config_TGP.yml "%s%
-            "-f AncientBritish_1000G_ras"%s%"_TVonly"%s%".table.txt\"") pos_ancient pos_modern afCond bedOpt afStr bedStr
+            "-f AncientBritish_1000G_ras"%s%"_TVonly"%s%".table.txt") pos_ancient pos_modern afCond bedOpt afStr bedStr
 
   
