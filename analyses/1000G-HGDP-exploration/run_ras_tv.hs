@@ -24,7 +24,8 @@ main = do
             print cmd
             stdout (inshell cmd empty)
     sh $ do
-        afStr <- select ["01", "02", "05", "10", "20", "Common", "All"]
+        -- afStr <- select ["01", "02", "05", "10", "20", "Common", "All"]
+        let afStr = "Common"
         let mapMasked = True
         -- mapMasked <- select [False, True]
         let afCond = case afStr of
@@ -33,7 +34,7 @@ main = do
                 "05"     -> "--noMinFreq    --maxFreq 0.05"
                 "10"     -> "--noMinFreq    --maxFreq 0.1"
                 "20"     -> "--noMinFreq    --maxFreq 0.2"
-                "Common" -> "--minFreq 0.95 --maxFreq 0.05"
+                "Common" -> "--minFreq 0.05 --maxFreq 0.95"
                 "All"    -> "--noMinFreq    --noMaxFreq"
         let bedOpt = if mapMasked then
                 format ("--bedFile "%fp%" ") bed_file else " "
