@@ -559,6 +559,9 @@ process run_xerxes {
   for left in \${leftpops[@]}; do
     echo "  - <\${left}>" >>popConfigFile.txt
   done
+  for right in \${rightpops[@]}; do
+    echo "  - \${right}" >>popConfigFile.txt
+  done
 
   echo "popRights:" >>popConfigFile.txt
   for right in \${rightpops[@]}; do
