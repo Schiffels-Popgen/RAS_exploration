@@ -576,7 +576,6 @@ process run_xerxes {
     --minAC 2 \
     --maxAC ${params.max_ras_ac} \
     -j CHR \
-    -k 5 \
     -f ras_table.out \
     --blockTableFile blockTableFile.txt
   """
