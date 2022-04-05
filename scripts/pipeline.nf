@@ -539,6 +539,7 @@ process run_xerxes {
   output:
   tuple chrom_name, variant_set, path("*.out") into (ch_xerxes_ras_output_for_matrix, ch_xerxes_ras_for_rasta)
   file "popConfigFile.txt"
+  file "blockTableFile.txt"
 
   script: 
   """
@@ -547,7 +548,7 @@ process run_xerxes {
   leftpops=()
   rightpops=()
   for pop in {0..8}; do
-    excluded_ind='!ind'\$((${params.n_ind_per_pop} * \${pop}))
+    excluded_ind='!<ind'\$((${params.n_ind_per_pop} * \${pop}))'>'
     echo -e "  Pop\${pop}Rest: Pop\${pop},\${excluded_ind}" >>popConfigFile.txt
     leftpops+=(\${excluded_ind#"!"}) ## Add excluded ind to lefts without the leading "!"
     rightpops+=(Pop\${pop}Rest) ## Add created population into rights
@@ -558,6 +559,9 @@ process run_xerxes {
   for left in \${leftpops[@]}; do
     echo "  - <\${left}>" >>popConfigFile.txt
   done
+  for right in \${rightpops[@]}; do
+    echo "  - \${right}" >>popConfigFile.txt
+  done
 
   echo "popRights:" >>popConfigFile.txt
   for right in \${rightpops[@]}; do
@@ -567,6 +571,12 @@ process run_xerxes {
   echo "outgroup: <Ref>" >>popConfigFile.txt
 
   ## Run ras
-  ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir} --popConfigFile popConfigFile.txt -j CHR -k 5 -f ras_table.out
+  ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir} \
+    --popConfigFile popConfigFile.txt \
+    --minAC 2 \
+    --maxAC ${params.max_ras_ac} \
+    -j CHR \
+    -f ras_table.out \
+    --blockTableFile blockTableFile.txt
   """
 }
