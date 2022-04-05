@@ -557,7 +557,7 @@ process run_xerxes {
   ## Define rights and lefts
   echo "popLefts:" >>popConfigFile.txt
   for left in \${leftpops[@]}; do
-    echo "  - <\${left}>" >>popConfigFile.txt
+    echo "  - \${left}" >>popConfigFile.txt
   done
   for right in \${rightpops[@]}; do
     echo "  - \${right}" >>popConfigFile.txt
