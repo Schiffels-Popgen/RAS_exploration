@@ -548,16 +548,16 @@ process run_xerxes {
   leftpops=()
   rightpops=()
   for pop in {0..8}; do
-    excluded_ind='!<ind'\$((${params.n_ind_per_pop} * \${pop}))'>'
+    excluded_ind='-<ind'\$((${params.n_ind_per_pop} * \${pop}))'>'
     echo -e "  Pop\${pop}Rest: Pop\${pop},\${excluded_ind}" >>popConfigFile.txt
-    leftpops+=(\${excluded_ind#"!"}) ## Add excluded ind to lefts without the leading "!"
+    leftpops+=(\${excluded_ind#"-"}) ## Add excluded ind to lefts without the leading "-"
     rightpops+=(Pop\${pop}Rest) ## Add created population into rights
   done
 
   ## Define rights and lefts
   echo "popLefts:" >>popConfigFile.txt
   for left in \${leftpops[@]}; do
-    echo "  - <\${left}>" >>popConfigFile.txt
+    echo "  - \${left}" >>popConfigFile.txt
   done
   for right in \${rightpops[@]}; do
     echo "  - \${right}" >>popConfigFile.txt
