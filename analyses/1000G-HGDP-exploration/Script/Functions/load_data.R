@@ -1,3 +1,5 @@
+library(magrittr)
+
 file_pattern <- "AncientBritish_(HGDP|1000G)_(1240K_){0,1}ras([0-9A-Za-z]+)(_TVonly){0,1}(_mapMasked){0,1}.table.txt"
 
 popNames <- tibble::tribble(
@@ -37,7 +39,43 @@ popNames <- tibble::tribble(
   "<NA19256>", "YRI",
   "<NA19257>", "YRI",
   "<HG02348>", "PEL",
-  "<HG02425>", "PEL"
+  "<HG02425>", "PEL",
+  "<I0156.SG>", "AncientBritish",
+  "<I0157.SG>", "AncientBritish",
+  "<I0159.SG>", "AncientBritish",
+  "<I0160.SG>", "AncientBritish",
+  "<I0161.SG>", "AncientBritish",
+  "<I0769.SG>", "AncientBritish",
+  "<I0773.SG>", "AncientBritish",
+  "<I0774.SG>", "AncientBritish",
+  "<I0777.SG>", "AncientBritish",
+  "<I0789.SG>", "AncientBritish",
+  "<3DT16.SG>",  "AncientBritish",
+  "<3DT26.SG>",  "AncientBritish",
+  "<6DT18.SG>",  "AncientBritish",
+  "<6DT21.SG>",  "AncientBritish",
+  "<6DT22.SG>",  "AncientBritish",
+  "<6DT23.SG>",  "AncientBritish",
+  "<6DT3.SG>",   "AncientBritish",
+  "<M1489.SG>",  "AncientBritish",    
+  "<NO3423.SG>", "AncientBritish",
+  "<NA12889.SG>", "CEU",
+  "<NA12890.SG>", "CEU",
+  "<HG00383.SG>", "FIN",
+  "<HG00384.SG>", "FIN",
+  "<HG01791.SG>", "GBR",
+  "<HG02215.SG>", "GBR",
+  "<HG02238.SG>", "IBS", 
+  "<HG02239.SG>", "IBS",
+  "<NA20828.SG>", "TSI",
+  "<NA20832.SG>", "TSI",
+  "<NA18749.SG>", "CHB",
+  "<NA18757.SG>", "CHB",
+  "<NA19248.SG>", "YRI",
+  "<NA19256.SG>", "YRI",
+  "<NA19257.SG>", "YRI",
+  "<HG02348.SG>", "PEL",
+  "<HG02425.SG>", "PEL"
 )
 
 read_ras_table <- function(full_filename) {
@@ -53,5 +91,7 @@ read_ras_table <- function(full_filename) {
     dplyr::left_join(popNames)
 }
 
-ras_table <- list.files(pattern = file_pattern, full.names=TRUE) %>%
-  purrr::map_dfr(~read_ras_table(.))
+read_ras_tables <- function(dir = "Data") {
+  list.files(dir, pattern = file_pattern, full.names=TRUE) %>%
+    purrr::map_dfr(~read_ras_table(.))
+}

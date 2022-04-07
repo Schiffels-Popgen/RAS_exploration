@@ -41,6 +41,6 @@ main = do
         let bedStr = if mapMasked then "_mapMasked" else ""
         liftIO . process $ format ("qsub -V -b y -cwd -l h_vmem=16G xerxes ras -d "%fp%" -d "%fp%
             " -j 100000 --noTransitions "%s%" --popConfigFile pop_config_TGP.yml "%s%
-            "-f AncientBritish_1000G_ras"%s%"_TVonly"%s%".table.txt") pos_ancient pos_modern afCond bedOpt afStr bedStr
+            "-f ../Data/AncientBritish_1000G_ras"%s%"_TVonly"%s%".table.txt") pos_ancient pos_modern afCond bedOpt afStr bedStr
 
   
