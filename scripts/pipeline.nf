@@ -9,7 +9,7 @@ def helpMessage() {
 
   The typical command for running the pipeline on sdag is as follows:
 
-  nextflow run pipeline.nf -profile conda,shh,sdag --four_mN 1 --chrom_length 1e6 --n_ind_per_pop 20 --max_ras_ac 5 --knn 5
+  nextflow run pipeline.nf -profile cobra,mpcdf,conda,var_sim --four_mN 1 --chrom_length 1e6 --n_ind_per_pop 20 --max_ras_ac 5 --knn 5
 
   Mandatory arguments:
       -profile [str]          Institution or personal hardware config to use (e.g. standard, docker, singularity, conda, aws). Ask your system admin if unsure, or check documentation.
