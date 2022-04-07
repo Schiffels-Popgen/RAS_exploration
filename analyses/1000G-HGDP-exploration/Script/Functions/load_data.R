@@ -75,7 +75,47 @@ popNames <- tibble::tribble(
   "<NA19256.SG>", "YRI",
   "<NA19257.SG>", "YRI",
   "<HG02348.SG>", "PEL",
-  "<HG02425.SG>", "PEL"
+  "<HG02425.SG>", "PEL",
+  "<HGDP01357>", "Basque",
+  "<HGDP01358>", "Basque",
+  "<HGDP01149>", "BergamoItalian",
+  "<HGDP01151>", "BergamoItalian",
+  "<HGDP00511>", "French", 
+  "<HGDP00512>", "French",
+  "<HGDP00774>", "Han", 
+  "<HGDP00775>", "Han",
+  "<HGDP00995>", "Karitiana",
+  "<HGDP00998>", "Karitiana",
+  "<HGDP00449>", "Mbuti", 
+  "<HGDP00450>", "Mbuti",
+  "<HGDP00794>", "Orcadian",
+  "<HGDP00795>", "Orcadian",
+  "<HGDP00879>", "Russian", 
+  "<HGDP00880>", "Russian",
+  "<HGDP00665>", "Sardinian",
+  "<HGDP00666>", "Sardinian",
+  "<HGDP01161>", "Tuscan", 
+  "<HGDP01162>", "Tuscan",
+  "<HGDP01357.SDG>", "Basque",
+  "<HGDP01358.SDG>", "Basque",
+  "<HGDP01149.SDG>", "BergamoItalian",
+  "<HGDP01151.SDG>", "BergamoItalian",
+  "<HGDP00511.SDG>", "French", 
+  "<HGDP00512.SDG>", "French",
+  "<HGDP00774.SDG>", "Han", 
+  "<HGDP00775.SDG>", "Han",
+  "<HGDP00995.SDG>", "Karitiana",
+  "<HGDP00998.SDG>", "Karitiana",
+  "<HGDP00449.SDG>", "Mbuti", 
+  "<HGDP00450.SDG>", "Mbuti",
+  "<HGDP00794.SDG>", "Orcadian",
+  "<HGDP00795.SDG>", "Orcadian",
+  "<HGDP00879.SDG>", "Russian", 
+  "<HGDP00880.SDG>", "Russian",
+  "<HGDP00665.SDG>", "Sardinian",
+  "<HGDP00666.SDG>", "Sardinian",
+  "<HGDP01161.SDG>", "Tuscan", 
+  "<HGDP01162.SDG>", "Tuscan"
 )
 
 read_ras_table <- function(full_filename) {
@@ -95,3 +135,14 @@ read_ras_tables <- function(dir = "Data") {
   list.files(dir, pattern = file_pattern, full.names=TRUE) %>%
     purrr::map_dfr(~read_ras_table(.))
 }
+
+
+
+
+
+
+
+
+
+
+

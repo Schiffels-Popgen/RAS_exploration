@@ -25,9 +25,11 @@ ui <- fluidPage(
           checkboxInput("TVonly", "transversions only", TRUE),
           checkboxInput("mapMasked", "mapping mask filter", TRUE),
           radioButtons("rightPop", "Right Population",
-                       c("CEU2", "FIN2", "GBR2", "IBS2", "TSI2")),
+                       c("CEU2", "FIN2", "GBR2", "IBS2", "TSI2",
+                       "Basque2", "BergamoItalian2", "French2", "Orcadian2", "Russian2", "Sardinian2", "Tuscan2")),
           radioButtons("rasAF", "Allele Frequency Cutoff", 
-                       c("01", "02", "05", "10", "20", "All", "Common"))
+                       c("01", "02", "05", "10", "20", "All", "Common")),
+          radioButtons("dataset", "Dataset", c("1000G", "HGDP"))
         ),
 
         # Show a plot of the generated distribution
@@ -41,8 +43,8 @@ ui <- fluidPage(
 server <- function(input, output) {
     
     output$distPlot <- renderPlot({
-      ras_data %>% dplyr::filter(Right == input$rightPop & dataset == "1000G" &
-                                 !(Group %in% c("YRI", "PEL", "CHB")) &
+      ras_data %>% dplyr::filter(Right == input$rightPop & dataset == input$dataset &
+                                 !(Group %in% c("YRI", "PEL", "CHB", "Han", "Karitiana", "Mbuti")) &
                                  TF == input$TF & rasAF == input$rasAF &
                                  tvOnly == input$TVonly &
                                  mapMasked == input$mapMasked) %>%
