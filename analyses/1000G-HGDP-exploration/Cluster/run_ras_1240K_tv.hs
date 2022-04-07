@@ -6,14 +6,9 @@ import Control.Monad (forM_)
 import Turtle
 import Prelude hiding (FilePath)
 
-data_dir :: FilePath
-data_dir = "/mnt/archgen/MICROSCOPE/rarevar_sim_study/real_data"
 
-pos_ancient :: FilePath
-pos_ancient = data_dir </> "ancient/ancientBritish/1000g/poseidon"
-
-pos_modern :: FilePath
-pos_modern = data_dir </> "modern/1000G/plink/poseidon/all_vars"
+repo_dir :: FilePath
+repo_dir = "/mnt/archgen/poseidon/published_data"
 
 bed_file :: FilePath
 bed_file = "/mnt/archgen/users/schiffels/hs37m_filt35_99.bed"
@@ -24,10 +19,8 @@ main = do
             print cmd
             stdout (inshell cmd empty)
     sh $ do
-        -- afStr <- select ["01", "02", "05", "10", "20", "Common", "All"]
-        let afStr = "Common"
-        let mapMasked = True
-        -- mapMasked <- select [False, True]
+        afStr <- select ["01", "02", "05", "10", "20", "Common", "All"]
+        mapMasked <- select [False, True]
         let afCond = case afStr of
                 "01"     -> "--noMinFreq    --maxFreq 0.01"
                 "02"     -> "--noMinFreq    --maxFreq 0.02"
@@ -39,8 +32,8 @@ main = do
         let bedOpt = if mapMasked then
                 format ("--bedFile "%fp%" ") bed_file else " "
         let bedStr = if mapMasked then "_mapMasked" else ""
-        liftIO . process $ format ("qsub -V -b y -cwd -l h_vmem=16G xerxes ras -d "%fp%" -d "%fp%
-            " -j 100000 --noTransitions "%s%" --popConfigFile pop_config_TGP.yml "%s%
-            "-f AncientBritish_1000G_ras"%s%"_TVonly"%s%".table.txt") pos_ancient pos_modern afCond bedOpt afStr bedStr
+        liftIO . process $ format ("qsub -V -b y -cwd -l h_vmem=16G xerxes ras -d "%fp%
+            " -j 100000 --noTransitions "%s%" --popConfigFile pop_config_TGP_1240K.yml "%s%
+            "-f ../Data/AncientBritish_1000G_1240K_ras"%s%"_TVonly"%s%".table.txt") repo_dir afCond bedOpt afStr bedStr
 
   
