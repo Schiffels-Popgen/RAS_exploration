@@ -33,10 +33,11 @@ main = do
             print cmd
             stdout (inshell cmd empty)
     sh $ do
-        -- afStr <- select ["01", "02", "05", "10", "20", "Common", "All"]
-        afStr <- select ["02", "05", "10", "20", "Common", "All"]
+        afStr <- select ["01", "02", "05", "10", "20", "Common", "All"]
         mapMasked <- select [False, True]
-        let dataset = "HGDP"
+        dataset <- select ["1000G", "HGDP"]
+        tf <- select [False, True]
+        tvOnly <- select [False, True]
         let afCond = case afStr of
                 "01"     -> "--noMinFreq    --maxFreq 0.01"
                 "02"     -> "--noMinFreq    --maxFreq 0.02"
@@ -47,20 +48,24 @@ main = do
                 "All"    -> "--noMinFreq    --noMaxFreq"
         let bedOpt = if mapMasked then
                 format ("--bedFile "%fp%" ") bed_file else " "
+        let base_dirs = case (dataset, tf) of
+                ("1000G", False) -> format ("-d "%fp%" -d "%fp) pos_ancient pos_modern
+                ("HGDP", False) -> format ("-d "%fp%" -d "%fp) pos_ancient_hgdp pos_modern_hgdp
+                (_, True) -> format ("-d "%fp) repo_dir
+        let config_file = case (dataset, tf) of
+                ("1000G", False) -> "pop_config_TGP.yml"
+                ("HGDP", False) -> "pop_config_HGDP.yml"
+                ("1000G", True) -> "pop_config_TGP_1240K.yml"
+                ("HGDP", True) -> "pop_config_HGDP_1240K.yml"
+        let tvCmd = if tvOnly then "--noTransitions" else ""
         let bedStr = if mapMasked then "_mapMasked" else ""
-        let outFN =
-                if dataset == "1000G" then
-                        format("AncientBritish_1000G_ras"%s%"_TVonly"%s%".table.txt") afStr bedStr
-                else
-                        format("AncientBritish_HGDP_ras"%s%"_TVonly"%s%".table.txt") afStr bedStr
-        let base_dirs =
-                if dataset == "1000G" then
-                        format ("-d "%fp%" -d "%fp) pos_ancient pos_modern
-                else
-                        format ("-d "%fp%" -d "%fp) pos_ancient_hgdp pos_modern_hgdp
-        let config_file = if dataset == "1000G" then "pop_config_TGP.yml" else "pop_config_HGDP.yml"
-        liftIO . process $ format ("qsub -V -b y -cwd -l h_vmem=16G xerxes ras "%s%
-            " -j 100000 --noTransitions "%s%" --popConfigFile "%s%" "%s%
-            "-f ../Data/"%s) base_dirs afCond config_file bedOpt outFN
+        let tfStr = if tf then "_1240K" else ""
+        let tvStr = if tvOnly then "_TVonly" else ""
+        let outFN = fromText $ format("AncientBritish_"%s%s%"_ras"%s%s%s%".table.txt") dataset tfStr afStr tvStr bedStr
+        e <- testfile ("../Data" </> outFN)
+        when (not e) . liftIO . process $ 
+            format ("qsub -V -b y -cwd -l h_vmem=16G xerxes ras "%s%
+                " -j 100000 "%s%" "%s%" --popConfigFile "%s%" "%s%
+                "-f ../Data/"%fp) base_dirs tvCmd afCond config_file bedOpt outFN
 
   
