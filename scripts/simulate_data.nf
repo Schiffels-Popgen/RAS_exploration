@@ -43,25 +43,21 @@ println ""
 
 process msprime{
   
-  tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
-  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}", mode: 'copy'
+  tag "n${params.n_ind_per_pop}_m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
+  // publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}", mode: 'copy'
   memory '8GB'
-  
+  // executor 'local'
+
   input:
   val chrom_name from Channel.of(1..20)
   
   output:
-  tuple val(chrom_name), val("all"), path("all_vars_m${params.four_mN}_chr${chrom_name}.geno"), path("all_vars_m${params.four_mN}_chr${chrom_name}.snp"), path("all_vars_m${params.four_mN}_chr${chrom_name}.ind"), path("all_vars_m${params.four_mN}_chr${chrom_name}.indEach") into (ch_all_vars_datasets, ch_all_vars_for_trident)
-  tuple val(chrom_name), val("common"), path("common_vars_m${params.four_mN}_chr${chrom_name}.geno"), path("common_vars_m${params.four_mN}_chr${chrom_name}.snp"), path("common_vars_m${params.four_mN}_chr${chrom_name}.ind"), path("common_vars_m${params.four_mN}_chr${chrom_name}.indEach") into (ch_common_vars_datasets, ch_for_1240k_input_geno, ch_for_1240k_input_snp, ch_for_1240k_input_ind, ch_for_1240k_input_indEach)
-  tuple val(chrom_name), val("rare"), path("all_vars_m${params.four_mN}_chr${chrom_name}.freqsum.gz") into (ch_freqsum_dataset, ch_for_linecount)
-/*  tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.geno") into ch_all_vars_geno_for_f3
-  tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.snp") into ch_all_vars_snp_for_f3
-  tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.ind") into ch_all_vars_ind_for_f3
-  tuple val(chrom_name), path("all_vars_m${params.four_mN}_chr${chrom_name}.indEach") into ch_all_vars_indEach_for_f3
-  tuple val(chrom_name), path("common_vars_m${params.four_mN}_chr${chrom_name}.geno") into (ch_common_vars_geno_for_f3, ch_common_vars_geno_for_1240k )
-  tuple val(chrom_name), path("common_vars_m${params.four_mN}_chr${chrom_name}.snp") into (ch_common_vars_snp_for_f3, ch_common_vars_snp_for_1240k )
-  tuple val(chrom_name), path("common_vars_m${params.four_mN}_chr${chrom_name}.ind") into (ch_common_vars_ind_for_f3, ch_common_vars_ind_for_1240k )
-  tuple val(chrom_name), path("common_vars_m${params.four_mN}_chr${chrom_name}.indEach") into (ch_common_vars_indEach_for_f3, ch_common_vars_indEach_for_1240k )*/
+  path("all_vars_m${params.four_mN}_chr${chrom_name}.geno") into ch_all_vars_geno
+  path("all_vars_m${params.four_mN}_chr${chrom_name}.snp") into ch_all_vars_snp
+  path("all_vars_m${params.four_mN}_chr${chrom_name}.ind") into ch_all_vars_ind
+  path("common_vars_m${params.four_mN}_chr${chrom_name}.geno") into (ch_common_vars_geno, ch_common_vars_geno_for_1240k )
+  path("common_vars_m${params.four_mN}_chr${chrom_name}.snp") into (ch_common_vars_snp, ch_common_vars_snp_for_1240k )
+  path("common_vars_m${params.four_mN}_chr${chrom_name}.ind") into (ch_common_vars_ind, ch_common_vars_ind_for_1240k )
   path("variant_counts.m${params.four_mN}_chr${chrom_name}.txt") 
   
   script:
@@ -71,29 +67,19 @@ process msprime{
   """
 }
 
-/*
-Collect and filter the 1240k making input into 4 subchannels
-*/
-ch_common_vars_geno_for_1240k=ch_for_1240k_input_geno.map{ it[2] }
-ch_common_vars_snp_for_1240k=ch_for_1240k_input_snp.map{ it[3] }
-ch_common_vars_ind_for_1240k=ch_for_1240k_input_ind.map{ it[4] }
-ch_common_vars_indEach_for_1240k=ch_for_1240k_input_indEach.map{ it[5] }
-
-
 process make_1240k{
-
-  tag "m${params.four_mN}_chr${chrom_name}_l${params.chrom_length}"
+  tag "n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
   publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}", mode: 'copy'
   memory '1GB'
+  executor 'local'
 
   input:
   path genos from ch_common_vars_geno_for_1240k.collect()
   path snps from ch_common_vars_snp_for_1240k.collect()
   path inds from ch_common_vars_ind_for_1240k.collect()
-  path indEachs from ch_common_vars_indEach_for_1240k.collect()
 
   output:
-  tuple val("1:20"),val("1240k"),path("twelve_forty_vars_m${params.four_mN}.geno"),path("twelve_forty_vars_m${params.four_mN}.snp"),path("twelve_forty_vars_m${params.four_mN}.ind"),path("twelve_forty_vars_m${params.four_mN}.indEach") into ch_twelve_forty_vars_datasets
+  tuple val("1:20"),val("twelve_forty_vars"),path("twelve_forty_vars.geno"),path("twelve_forty_vars.snp"),path("twelve_forty_vars.ind") into ch_twelve_forty_vars_datasets
 
   script:
   """
@@ -107,12 +93,97 @@ process make_1240k{
   paste -d " " concat_snps concat_genos | cat -n | shuf -n 1200000 | sort -nk1 | sed -e 's/^[ ]*//' >banana.txt
   
   ## Extract the .snp and .geno file from the subsample. 
-  cut -f 1 -d " " banana.txt | cut -f 2- >twelve_forty_vars_m${params.four_mN}.snp
-  cut -f 2 -d " " banana.txt >twelve_forty_vars_m${params.four_mN}.geno
+  cut -f 1 -d " " banana.txt | cut -f 2- >twelve_forty_vars.snp
+  cut -f 2 -d " " banana.txt >twelve_forty_vars.geno
   
   ## Copy the original ind files 
-  cp ${inds[0]} twelve_forty_vars_m${params.four_mN}.ind
-  cp ${indEachs[0]} twelve_forty_vars_m${params.four_mN}.indEach
+  cp ${inds[0]} twelve_forty_vars.ind
   """
 }
 
+process merge_chroms_common_vars {
+  tag "n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/", mode: 'copy'
+  memory '50MB'
+  cpus 1
+  executor 'local'
+
+  input:
+  path genos from ch_common_vars_geno.collect()
+  path snps from ch_common_vars_snp.collect()
+  path inds from ch_common_vars_ind.collect()
+
+  output:
+  tuple val("1:20"),val("common_vars"),path("common_vars.geno"),path("common_vars.snp"),path("common_vars.ind") into ch_common_vars_datasets
+
+  script:
+  """
+  ## First concatenate the snps and genos by chromosome
+  for chrom_name in {1..20}; do
+    cat common_vars_m${params.four_mN}_chr\${chrom_name}.geno  >> common_vars.geno
+    cat common_vars_m${params.four_mN}_chr\${chrom_name}.snp  >> common_vars.snp
+  done
+
+  ## Copy the original ind files 
+  cp ${inds[0]} common_vars.ind
+  """
+}
+
+
+process merge_chroms_all_vars {
+  tag "n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/", mode: 'copy'
+  memory '50MB'
+  cpus 1
+  executor 'local'
+
+  input:
+  path genos from ch_all_vars_geno.collect()
+  path snps from ch_all_vars_snp.collect()
+  path inds from ch_all_vars_ind.collect()
+
+  output:
+  tuple val("1:20"),val("all_vars"),path("all_vars.geno"),path("all_vars.snp"),path("all_vars.ind") into ch_all_vars_datasets
+
+  script:
+  """
+  ## First concatenate the snps and genos by chromosome
+  for chrom_name in {1..20}; do
+    cat all_vars_m${params.four_mN}_chr\${chrom_name}.geno  >> all_vars.geno
+    cat all_vars_m${params.four_mN}_chr\${chrom_name}.snp  >> all_vars.snp
+  done
+
+  ## Copy the original ind files 
+  cp ${inds[0]} all_vars.ind
+  """
+}
+
+ch_datasets=ch_all_vars_datasets
+    .mix(ch_common_vars_datasets, ch_twelve_forty_vars_datasets)
+    .dump(tag:"datasets")
+
+process create_poseidon_packages {
+  tag "${variant_set}_n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/poseidon", mode: 'copy'
+  memory '50MB'
+  cpus 1
+  executor 'local'
+
+  input:
+  tuple chroms, variant_set, path(geno), path(snp), path(ind) from ch_datasets
+
+  output:
+  tuple path("${variant_set}/${variant_set}.geno"), path("${variant_set}/${variant_set}.snp"), path("${variant_set}/${variant_set}.ind"), path("${variant_set}/${variant_set}.janno"), path("${variant_set}/${variant_set}.bib"), path("${variant_set}/POSEIDON.yml")
+
+  script:
+  """
+  ## trident creates the package within the work directory, and nextflow is responsible for putting it in the data dir.
+  ${params.poseidon_exec_dir}/trident init --inFormat EIGENSTRAT \
+      --snpSet Other \
+      --genoFile ${variant_set}.geno \
+      --snpFile ${variant_set}.snp \
+      --indFile ${variant_set}.ind \
+      -o ${variant_set} \
+      -n ${variant_set}
+  """
+}
