@@ -173,7 +173,7 @@ process create_poseidon_packages {
   tuple chroms, variant_set, path(geno), path(snp), path(ind) from ch_datasets
 
   output:
-  tuple path("${variant_set}/${variant_set}.geno"), path("${variant_set}/${variant_set}.snp"), path("${variant_set}/${variant_set}.ind"), path("${variant_set}/${variant_set}.janno"), path("${variant_set}/${variant_set}.bib"), path("${variant_set}/POSEIDON.yml")
+  tuple path("${variant_set}/${variant_set}.bed"), path("${variant_set}/${variant_set}.bim"), path("${variant_set}/${variant_set}.fam"), path("${variant_set}/${variant_set}.geno"), path("${variant_set}/${variant_set}.snp"), path("${variant_set}/${variant_set}.ind"), path("${variant_set}/${variant_set}.janno"), path("${variant_set}/${variant_set}.bib"), path("${variant_set}/POSEIDON.yml")
 
   script:
   """
@@ -185,5 +185,10 @@ process create_poseidon_packages {
       --indFile ${variant_set}.ind \
       -o ${variant_set} \
       -n ${variant_set}
+  
+  ## Convert to plink format for faster computation with xerxes.
+  ${params.poseidon_exec_dir}/trident genoconvert \
+      --outFormat PLINK \
+      -d .
   """
 }
