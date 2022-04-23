@@ -1,0 +1,52 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+---
+
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+library(tidyverse)
+load_data <- function(four_mN) {
+  data <- c(2,3,4,5,"Outgroup_F3") %>% 
+  map_df(
+    ~read_tsv(
+      paste0("~/Software/github/Schiffels-Popgen/RAS_exploration/rasta_plots_for_stephan/rasta_m",four_mN,"/rasta_out.m",.,".txt"), 
+      col_types='cccdddc')
+    ) %>%
+  mutate(
+    absZ=abs(Zscore),
+    ## Allele count of "Outgroup F3" means that the "RASTA" was calculated using the Outgroup F3 output of RASCal. The loaded data from this AC are actually F4s.
+    AlleleCount=if_else(AlleleCount == "Outgroup F3", "All", AlleleCount)
+    )
+  return(data)
+}
+```
+
+```{r}
+four_mN <- "50.0"
+data <- load_data(four_mN)
+
+ggplot(data) +
+  geom_point(aes(x=AlleleCount, y=absZ), alpha=0.3, position=position_jitter(width=0.3, height=0))+
+  ggtitle(paste0("m=",four_mN))
+```
+
+```{r}
+four_mN <- "100.0"
+data <- load_data(four_mN)
+
+ggplot(data) +
+  geom_point(aes(x=AlleleCount, y=absZ), alpha=0.3, position=position_jitter(width=0.3, height=0)) +
+  ggtitle(paste0("m=",four_mN))
+```
+```{r}
+four_mN <- "200.0"
+data <- load_data(four_mN)
+
+ggplot(data) +
+  geom_point(aes(x=AlleleCount, y=absZ), alpha=0.3, position=position_jitter(width=0.3, height=0)) +
+  ggtitle(paste0("m=",four_mN))
+```
