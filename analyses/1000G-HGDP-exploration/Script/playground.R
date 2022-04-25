@@ -1,11 +1,28 @@
+library(ggplot2)
 source("Script/Functions/load_data.R")
 
-ras_table <- read_ras_tables()
+# ras_table <- read_ras_tables()
+# readr::write_rds(ras_table, "Data/combined_data.rds")
+ras_table <- readr::read_rds("Data/combined_data.rds")
 
 ras_table %>% dplyr::filter(Right == "CEU2" & dataset == "1000G" &
                              TF == FALSE & rasAF == "01" & tvOnly == TRUE &
                              mapMasked == TRUE)
 
+
+ras_table %>% dplyr::filter(
+  dataset == "1000G",
+  TF == FALSE,
+  mapMasked == TRUE,
+  tvOnly == TRUE,
+  Right == "FIN2",
+  Left %in% c("<12881A>", "<12884A>")
+) %>% dplyr::select(Left, rasAF, RAS, StdErr) %>%
+  tidyr::pivot_wider(names_from = Left, values_from = c(RAS, StdErr)) %>%
+  mutate(
+    rasF3 = `RAS_<12881A>` - `RAS_<12884A>`,
+    
+  )
 
 # Snippets
 
