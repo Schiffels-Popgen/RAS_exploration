@@ -134,7 +134,7 @@ process xerxes_f3 {
   for i in \$(seq 0 1 ${num_inds}); do
     lower_bound=\$(expr \${i} + 1)
     for j in \$(seq \${lower_bound} 1 ${num_inds}); do
-      echo -e "F3(<ind\${i}>, <ind\${j}>, Ref)"
+      echo -e "F3vanilla(<ind\${i}>, <ind\${j}>, Ref)"
     done
   done >pairwise_poplist.txt
 
