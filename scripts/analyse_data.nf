@@ -117,7 +117,7 @@ process xerxes_ras {
 
 process xerxes_f3 {
   tag "${variant_set} n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
-  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/xerxes_ras", mode: 'copy'
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/xerxes_f3", mode: 'copy'
   memory '8GB'
   cpus 1
 
@@ -145,6 +145,6 @@ process xerxes_f3 {
   ${params.poseidon_exec_dir}/xerxes fstats -d ${package_dir}/${variant_set} \
     --statFile pairwise_poplist.txt \
     -j CHR \
-    -f f3_table.out
+    -f f3_table_${variant_set}.out
   """
 }
