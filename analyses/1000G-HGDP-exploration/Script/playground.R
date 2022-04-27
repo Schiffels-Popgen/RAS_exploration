@@ -72,15 +72,21 @@ ggplot(umap_dat, aes(x = V1, y = V2, col = Group)) + geom_point()
 
 
 # Checking F4-values
-inds <- ras_table %>% dplyr::filter(dataset == "1000G") %>% dplyr::pull(Left) %>% unique()
-rasAF <- ras_table %>% dplyr::filter(dataset == "1000G") %>% dplyr::pull(rasAF) %>% unique()
+ras_table_short <- ras_table %>% dplyr::filter(
+  dataset == "1000G",
+  TF == FALSE,
+  tvOnly == FALSE,
+  mapMasked == FALSE
+) %>% dplyr::select(Left, Right, rasAF, RAS, StdErr, Group)
+
+inds <- ras_table_short %>% dplyr::pull(Left) %>% unique()
+rasAF <- ras_table %>% dplyr::pull(rasAF) %>% unique()
 rasf4_table <- tidyr::expand_grid(Left1 = inds, Left2 = inds, rasAF = rasAF) %>%
-  dplyr::mutate(dataset = "1000G") %>%
   dplyr::filter(Left1 != Left2) %>%
-  dplyr::left_join(ras_table, by = c("Left1" = "Left", "dataset" = "dataset", "rasAF" = "rasAF")) %>%
-  dplyr::rename(Norm1 = Norm, RAS1 = RAS, StdErr1 = StdErr, Group1 = Group) %>%
-  dplyr::left_join(ras_table, by = c("Left2" = "Left", "dataset" = "dataset", "rasAF" = "rasAF", "Right" = "Right")) %>%
-  dplyr::rename(Norm2 = Norm, RAS2 = RAS, StdErr2 = StdErr, Group2 = Group) %>%
+  dplyr::left_join(ras_table_short, by = c("Left1" = "Left", "rasAF" = "rasAF")) %>%
+  dplyr::rename(RAS1 = RAS, StdErr1 = StdErr, Group1 = Group) %>%
+  dplyr::left_join(ras_table_short, by = c("Left2" = "Left", "rasAF" = "rasAF", "Right" = "Right")) %>%
+  dplyr::rename(RAS2 = RAS, StdErr2 = StdErr, Group2 = Group) %>%
   dplyr::mutate(
     f4name = paste0("RAS-F4(", Left1, ", ", Left2, ", ", Right, ", Outgroup)"),
     rasF4 = RAS1 - RAS2,
@@ -88,27 +94,32 @@ rasf4_table <- tidyr::expand_grid(Left1 = inds, Left2 = inds, rasAF = rasAF) %>%
     rasF4Z = rasF4 / rasF4err
   )
 
+excl <- c("AncientBritish", "YRI", "CHB", "PEL")
 rasf4_table %>%
-  dplyr::filter(!(Group1 %in% c("AncientBritish", "YRI", "CHB", "PEL")),
-                !(Group2 %in% c("AncientBritish", "YRI", "CHB", "PEL"))) %>%
-  ggplot(aes(x = rasAF, y = abs(rasF4Z))) +
+  dplyr::filter(!(Group1 %in% excl),
+                !(Group2 %in% excl),
+                Group1 != substr(Right, 1, 3),
+                Group2 != substr(Right, 1, 3)) %>%
+  ggplot(aes(x = rasAF, y = abs(rasF4Z), col = (Group1 == Group2))) +
   geom_jitter(width=0.25)
-ggsave("analyses/HGDP-exploration/rasF4_1000G_modernOnly.pdf")
+ggsave("Output/rasF4_1000G_modernOnly_groupCol.pdf")
 
+incl <- c("<12880A>", "<12881A>", "<12883A>", "<12884A>", "<12885A>", 
+          "<15558A>", "<15569A>", "<15570A>", "<15577A>")
+ia <- c("<12880A>", "<12884A>", "<15579A>", "<M1489>")
 rasf4_table %>%
-  dplyr::filter(!(Group1 %in% c("AncientBritish", "YRI", "CHB", "PEL")),
-                !(Group2 %in% c("AncientBritish", "YRI", "CHB", "PEL")),
-                abs(rasF4Z) > 3) %>%
-  dplyr::group_by(rasAF) %>% dplyr::summarise(dplyr::n())
-
-rasf4_table %>%
-  dplyr::filter(Group1 == "AncientBritish" & Group2 == "AncientBritish") %>%
-  ggplot(aes(x = rasAF, y = abs(rasF4Z))) +
+  dplyr::filter(Left1 %in% incl,
+                Left2 %in% incl) %>%
+  ggplot(aes(x = rasAF, y = abs(rasF4Z), col = Left1)) +
   geom_jitter(width=0.25)
-ggsave("analyses/HGDP-exploration/rasF4_1000G_ancientsOnly.pdf")
+ggsave("Output/rasF4_1000G_ancientsOnly.pdf")
 
-rasf4_table %>%
-  dplyr::filter(Group1 == "AncientBritish" & Group2 == "AncientBritish") %>%
-  dplyr::filter(abs(rasF4Z) >= 3) %>%
-  dplyr::group_by(rasAF) %>%
-  dplyr::summarise(nr_significant = dplyr::n())
+ras_table_short %>%
+  dplyr::filter(Right == "CEU2",
+                rasAF == "01",
+                !(Group %in% c("YRI", "PEL", "CHB")),
+                Left %in% c("1288") %>%
+  ggplot(aes(x = Left, y = RAS, col = Group)) +
+    geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr))
+
+
