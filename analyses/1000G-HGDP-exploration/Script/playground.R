@@ -100,20 +100,23 @@ rasf4_table %>%
                 !(Group2 %in% excl),
                 Group1 != substr(Right, 1, 3),
                 Group2 != substr(Right, 1, 3)) %>%
-  ggplot(aes(x = rasAF, y = abs(rasF4Z), col = (Group1 == Group2))) +
+  # ggplot(aes(x = rasAF, y = abs(rasF4Z), col = (Group1 == Group2))) +
+  ggplot(aes(x = rasAF, y = abs(rasF4Z))) +
   geom_jitter(width=0.25)
-ggsave("Output/rasF4_1000G_modernOnly_groupCol.pdf")
+ggsave("Output/rasF4_1000G_modernOnly.pdf", width = 15, heigh = 10, units = "cm")
 
 ras_table_short %>%
   dplyr::filter(
     !(Group %in% excl),
-    rasAF == "All",
+    rasAF == "01",
     Right == "GBR2",
     Group != substr(Right, 1, 3)
   ) %>%
   ggplot(aes(x = Left, y = RAS, col = Group)) +
-    geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr))
-ggsave("Output/RAS_GBR_All.pdf")
+    geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr)) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90))
+ggsave("Output/RAS_GBR_01.pdf", width = 15, height = 10, units = "cm")
 
 # F4 not really working yet... too many possible effects from damage, coverage, etc
 incl <- c("<12880A>", "<12881A>", "<12883A>", "<12884A>", "<12885A>", 
