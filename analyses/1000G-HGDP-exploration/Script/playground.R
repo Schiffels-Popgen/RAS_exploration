@@ -5,9 +5,25 @@ source("Script/Functions/load_data.R")
 # readr::write_rds(ras_table, "Data/combined_data.rds")
 ras_table <- readr::read_rds("Data/combined_data.rds")
 
-ras_table %>% dplyr::filter(Right == "CEU2" & dataset == "1000G" &
-                             TF == FALSE & rasAF == "01" & tvOnly == TRUE &
-                             mapMasked == TRUE)
+# 2D plot
+ras_table %>%
+  dplyr::filter(dataset == "1000G", TF == FALSE, rasAF == "Common", tvOnly == TRUE, mapMasked == TRUE) %>%
+  dplyr::select(Left, Right, RAS, StdErr, Group) %>%
+  dplyr::filter(!(Group %in% c("AncientBritish"))) %>%
+  tidyr::pivot_wider(names_from = Right, values_from = c(RAS, StdErr)) %>%
+  ggplot(aes(x = RAS_IBS2, y = RAS_FIN2, color = Group)) +
+    geom_errorbar(aes(ymin = RAS_FIN2 - StdErr_FIN2, ymax = RAS_FIN2 + StdErr_FIN2)) +
+    geom_errorbarh(aes(xmin = RAS_IBS2 - StdErr_IBS2, xmax = RAS_IBS2 + StdErr_IBS2))
+
+# 1D
+ras_table %>%
+  dplyr::filter(dataset == "1000G", TF == FALSE, rasAF == "01", tvOnly == TRUE, mapMasked == TRUE) %>%
+  dplyr::select(Left, Right, RAS, StdErr, Group) %>%
+  # dplyr::filter(!(Group %in% c("AncientBritish", "YRI"))) %>%
+  dplyr::filter(Group == "AncientBritish") %>%
+  tidyr::pivot_wider(names_from = Right, values_from = c(RAS, StdErr)) %>%
+  ggplot(aes(x = Left, y = RAS_FIN2 - RAS_IBS2, color = Group)) +
+  geom_errorbar(aes(ymin = RAS_FIN2 - StdErr_FIN2, ymax = RAS_FIN2 + StdErr_FIN2))
 
 
 ras_table %>% dplyr::filter(
