@@ -104,22 +104,23 @@ rasf4_table %>%
   geom_jitter(width=0.25)
 ggsave("Output/rasF4_1000G_modernOnly_groupCol.pdf")
 
+ras_table_short %>%
+  dplyr::filter(
+    !(Group %in% excl),
+    rasAF == "All",
+    Right == "GBR2",
+    Group != substr(Right, 1, 3)
+  ) %>%
+  ggplot(aes(x = Left, y = RAS, col = Group)) +
+    geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr))
+ggsave("Output/RAS_GBR_All.pdf")
+
+# F4 not really working yet... too many possible effects from damage, coverage, etc
 incl <- c("<12880A>", "<12881A>", "<12883A>", "<12884A>", "<12885A>", 
           "<15558A>", "<15569A>", "<15570A>", "<15577A>")
-ia <- c("<12880A>", "<12884A>", "<15579A>", "<M1489>")
 rasf4_table %>%
   dplyr::filter(Left1 %in% incl,
                 Left2 %in% incl) %>%
-  ggplot(aes(x = rasAF, y = abs(rasF4Z), col = Left1)) +
+  ggplot(aes(x = rasAF, y = abs(rasF4Z), col = (Left1 == "<12884A>" | Left2 == "<12885A>"))) +
   geom_jitter(width=0.25)
 ggsave("Output/rasF4_1000G_ancientsOnly.pdf")
-
-ras_table_short %>%
-  dplyr::filter(Right == "CEU2",
-                rasAF == "01",
-                !(Group %in% c("YRI", "PEL", "CHB")),
-                Left %in% c("1288") %>%
-  ggplot(aes(x = Left, y = RAS, col = Group)) +
-    geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr))
-
-
