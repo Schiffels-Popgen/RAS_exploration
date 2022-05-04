@@ -1,11 +1,44 @@
+library(ggplot2)
 source("Script/Functions/load_data.R")
 
-ras_table <- read_ras_tables()
+# ras_table <- read_ras_tables()
+# readr::write_rds(ras_table, "Data/combined_data.rds")
+ras_table <- readr::read_rds("Data/combined_data.rds")
 
-ras_table %>% dplyr::filter(Right == "CEU2" & dataset == "1000G" &
-                             TF == FALSE & rasAF == "01" & tvOnly == TRUE &
-                             mapMasked == TRUE)
+# 2D plot
+ras_table %>%
+  dplyr::filter(dataset == "1000G", TF == FALSE, rasAF == "Common", tvOnly == TRUE, mapMasked == TRUE) %>%
+  dplyr::select(Left, Right, RAS, StdErr, Group) %>%
+  dplyr::filter(!(Group %in% c("AncientBritish"))) %>%
+  tidyr::pivot_wider(names_from = Right, values_from = c(RAS, StdErr)) %>%
+  ggplot(aes(x = RAS_IBS2, y = RAS_FIN2, color = Group)) +
+    geom_errorbar(aes(ymin = RAS_FIN2 - StdErr_FIN2, ymax = RAS_FIN2 + StdErr_FIN2)) +
+    geom_errorbarh(aes(xmin = RAS_IBS2 - StdErr_IBS2, xmax = RAS_IBS2 + StdErr_IBS2))
 
+# 1D
+ras_table %>%
+  dplyr::filter(dataset == "1000G", TF == FALSE, rasAF == "01", tvOnly == TRUE, mapMasked == TRUE) %>%
+  dplyr::select(Left, Right, RAS, StdErr, Group) %>%
+  # dplyr::filter(!(Group %in% c("AncientBritish", "YRI"))) %>%
+  dplyr::filter(Group == "AncientBritish") %>%
+  tidyr::pivot_wider(names_from = Right, values_from = c(RAS, StdErr)) %>%
+  ggplot(aes(x = Left, y = RAS_FIN2 - RAS_IBS2, color = Group)) +
+  geom_errorbar(aes(ymin = RAS_FIN2 - StdErr_FIN2, ymax = RAS_FIN2 + StdErr_FIN2))
+
+
+ras_table %>% dplyr::filter(
+  dataset == "1000G",
+  TF == FALSE,
+  mapMasked == TRUE,
+  tvOnly == TRUE,
+  Right == "FIN2",
+  Left %in% c("<12881A>", "<12884A>")
+) %>% dplyr::select(Left, rasAF, RAS, StdErr) %>%
+  tidyr::pivot_wider(names_from = Left, values_from = c(RAS, StdErr)) %>%
+  mutate(
+    rasF3 = `RAS_<12881A>` - `RAS_<12884A>`,
+    
+  )
 
 # Snippets
 
@@ -39,15 +72,21 @@ ggplot(umap_dat, aes(x = V1, y = V2, col = Group)) + geom_point()
 
 
 # Checking F4-values
-inds <- ras_table %>% dplyr::filter(dataset == "1000G") %>% dplyr::pull(Left) %>% unique()
-rasAF <- ras_table %>% dplyr::filter(dataset == "1000G") %>% dplyr::pull(rasAF) %>% unique()
+ras_table_short <- ras_table %>% dplyr::filter(
+  dataset == "1000G",
+  TF == FALSE,
+  tvOnly == FALSE,
+  mapMasked == FALSE
+) %>% dplyr::select(Left, Right, rasAF, RAS, StdErr, Group)
+
+inds <- ras_table_short %>% dplyr::pull(Left) %>% unique()
+rasAF <- ras_table %>% dplyr::pull(rasAF) %>% unique()
 rasf4_table <- tidyr::expand_grid(Left1 = inds, Left2 = inds, rasAF = rasAF) %>%
-  dplyr::mutate(dataset = "1000G") %>%
   dplyr::filter(Left1 != Left2) %>%
-  dplyr::left_join(ras_table, by = c("Left1" = "Left", "dataset" = "dataset", "rasAF" = "rasAF")) %>%
-  dplyr::rename(Norm1 = Norm, RAS1 = RAS, StdErr1 = StdErr, Group1 = Group) %>%
-  dplyr::left_join(ras_table, by = c("Left2" = "Left", "dataset" = "dataset", "rasAF" = "rasAF", "Right" = "Right")) %>%
-  dplyr::rename(Norm2 = Norm, RAS2 = RAS, StdErr2 = StdErr, Group2 = Group) %>%
+  dplyr::left_join(ras_table_short, by = c("Left1" = "Left", "rasAF" = "rasAF")) %>%
+  dplyr::rename(RAS1 = RAS, StdErr1 = StdErr, Group1 = Group) %>%
+  dplyr::left_join(ras_table_short, by = c("Left2" = "Left", "rasAF" = "rasAF", "Right" = "Right")) %>%
+  dplyr::rename(RAS2 = RAS, StdErr2 = StdErr, Group2 = Group) %>%
   dplyr::mutate(
     f4name = paste0("RAS-F4(", Left1, ", ", Left2, ", ", Right, ", Outgroup)"),
     rasF4 = RAS1 - RAS2,
@@ -55,27 +94,36 @@ rasf4_table <- tidyr::expand_grid(Left1 = inds, Left2 = inds, rasAF = rasAF) %>%
     rasF4Z = rasF4 / rasF4err
   )
 
+excl <- c("AncientBritish", "YRI", "CHB", "PEL")
 rasf4_table %>%
-  dplyr::filter(!(Group1 %in% c("AncientBritish", "YRI", "CHB", "PEL")),
-                !(Group2 %in% c("AncientBritish", "YRI", "CHB", "PEL"))) %>%
+  dplyr::filter(!(Group1 %in% excl),
+                !(Group2 %in% excl),
+                Group1 != substr(Right, 1, 3),
+                Group2 != substr(Right, 1, 3)) %>%
+  # ggplot(aes(x = rasAF, y = abs(rasF4Z), col = (Group1 == Group2))) +
   ggplot(aes(x = rasAF, y = abs(rasF4Z))) +
   geom_jitter(width=0.25)
-ggsave("analyses/HGDP-exploration/rasF4_1000G_modernOnly.pdf")
+ggsave("Output/rasF4_1000G_modernOnly.pdf", width = 15, heigh = 10, units = "cm")
 
-rasf4_table %>%
-  dplyr::filter(!(Group1 %in% c("AncientBritish", "YRI", "CHB", "PEL")),
-                !(Group2 %in% c("AncientBritish", "YRI", "CHB", "PEL")),
-                abs(rasF4Z) > 3) %>%
-  dplyr::group_by(rasAF) %>% dplyr::summarise(dplyr::n())
+ras_table_short %>%
+  dplyr::filter(
+    !(Group %in% excl),
+    rasAF == "01",
+    Right == "GBR2",
+    Group != substr(Right, 1, 3)
+  ) %>%
+  ggplot(aes(x = Left, y = RAS, col = Group)) +
+    geom_errorbar(aes(ymin = RAS - StdErr, ymax = RAS + StdErr)) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90))
+ggsave("Output/RAS_GBR_01.pdf", width = 15, height = 10, units = "cm")
 
+# F4 not really working yet... too many possible effects from damage, coverage, etc
+incl <- c("<12880A>", "<12881A>", "<12883A>", "<12884A>", "<12885A>", 
+          "<15558A>", "<15569A>", "<15570A>", "<15577A>")
 rasf4_table %>%
-  dplyr::filter(Group1 == "AncientBritish" & Group2 == "AncientBritish") %>%
-  ggplot(aes(x = rasAF, y = abs(rasF4Z))) +
+  dplyr::filter(Left1 %in% incl,
+                Left2 %in% incl) %>%
+  ggplot(aes(x = rasAF, y = abs(rasF4Z), col = (Left1 == "<12884A>" | Left2 == "<12885A>"))) +
   geom_jitter(width=0.25)
-ggsave("analyses/HGDP-exploration/rasF4_1000G_ancientsOnly.pdf")
-
-rasf4_table %>%
-  dplyr::filter(Group1 == "AncientBritish" & Group2 == "AncientBritish") %>%
-  dplyr::filter(abs(rasF4Z) >= 3) %>%
-  dplyr::group_by(rasAF) %>%
-  dplyr::summarise(nr_significant = dplyr::n())
+ggsave("Output/rasF4_1000G_ancientsOnly.pdf")

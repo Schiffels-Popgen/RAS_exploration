@@ -10,7 +10,8 @@
 library(shiny)
 library(ggplot2)
 source("Functions/load_data.R")
-ras_data <- read_ras_tables("../Data")
+# ras_data <- read_ras_tables("../Data")
+ras_data <- readr::read_rds("../Data/combined_data.rds")
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
