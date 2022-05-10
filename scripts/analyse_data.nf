@@ -60,9 +60,9 @@ ch_input_datasets=Channel.fromList(["all_vars", "common_vars", "twelve_forty_var
     rare: it[0] == "rare_vars"
     common: true
   }
-
-ch_input_datasets.rare
-  .into{ ch_input_xerxes_ras; ch_input_xerxes_pairwise_ras }
+  .into{ 
+    ch_input_for_xerxes_ras; ch_input_xerxes_pairwise_ras; ch_input_for_xerxes_f3; ch_input_for_xerxes_f4
+  }
 
 process xerxes_pairwise_ras {
   tag "n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
@@ -71,7 +71,7 @@ process xerxes_pairwise_ras {
   cpus 1
 
   input:
-  tuple variant_set, file(bed), file(bim), file(fam) from ch_input_xerxes_pairwise_ras
+  tuple variant_set, file(bed), file(bim), file(fam) from ch_input_xerxes_pairwise_ras.rare
 
   output:
   tuple variant_set, path("pairwise_*.out") into (ch_xerxes_pairwise_ras_output_for_matrix)
@@ -118,7 +118,7 @@ process xerxes_ras {
   cpus 1
 
   input:
-  tuple variant_set, file(bed), file(bim), file(fam) from ch_input_xerxes_ras
+  tuple variant_set, file(bed), file(bim), file(fam) from ch_input_for_xerxes_ras.rare
 
   output:
   tuple variant_set, path("*.out") into (ch_xerxes_ras_output_for_matrix, ch_xerxes_ras_for_rasta)
@@ -172,7 +172,7 @@ process xerxes_f3 {
   cpus 1
 
   input:
-  tuple variant_set, file(bed), file(bim), file(fam) from ch_input_datasets.common
+  tuple variant_set, file(bed), file(bim), file(fam) from ch_input_for_xerxes_f3.common
 
   output:
   tuple variant_set, path("*.out") into (ch_xerxes_fstats_output_for_matrix, ch_xerxes_fstats_for_rasta)
@@ -196,5 +196,41 @@ process xerxes_f3 {
     --statFile pairwise_poplist.txt \
     -j CHR \
     -f f3_table_${variant_set}.out
+  """
+}
+
+process xerxes_f4 {
+  tag "${variant_set} n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/xerxes_f3", mode: 'copy'
+  memory '8GB'
+  cpus 1
+
+  input:
+  tuple variant_set, file(bed), file(bim), file(fam) from ch_input_for_xerxes_f4.common
+
+  output:
+  tuple variant_set, path("*.out") into (ch_xerxes_f4_output)
+
+  script:
+  """
+  ## Create statFile
+  for i in \$(seq 0 1 ${num_inds}); do
+    for b in \$(seq 0 1 9); do
+      for c in \$(seq 0 1 9); do
+        if [[ ! "\${b}" == "\${c}" ]]; then
+          echo -e "F4(<ind\${i}>, Pop\${b}, Pop\${c}, Ref)"
+        fi
+      done
+    done
+  done >pairwise_poplist.txt
+
+  ## Remove the last byte (i.e. the final newline character) from the statFile
+  truncate -s -1 pairwise_poplist.txt
+
+  ## Run f4
+  ${params.poseidon_exec_dir}/xerxes fstats -d ${package_dir}/${variant_set} \
+    --statFile pairwise_poplist.txt \
+    -j CHR \
+    -f f4_table_${variant_set}.out
   """
 }
