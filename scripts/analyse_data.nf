@@ -61,6 +61,56 @@ ch_input_datasets=Channel.fromList(["all_vars", "common_vars", "twelve_forty_var
     common: true
   }
 
+ch_input_datasets.rare
+  .into{ ch_input_xerxes_ras; ch_input_xerxes_pairwise_ras }
+
+process xerxes_pairwise_ras {
+  tag "n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/xerxes_ras", mode: 'copy'
+  memory '8GB'
+  cpus 1
+
+  input:
+  tuple variant_set, file(bed), file(bim), file(fam) from ch_input_xerxes_pairwise_ras
+
+  output:
+  tuple variant_set, path("pairwise_*.out") into (ch_xerxes_pairwise_ras_output_for_matrix)
+  file "pairwise_popConfigFile.txt"
+  file "pairwise_blockTableFile.txt"
+
+  script:
+
+  """
+  ## Create population definitions file. Each pop consists of all but the last individual. The first individual of a pop is used as a left pop.
+  echo "groupDefs:" >pairwise_popConfigFile.txt
+  leftpops=()
+  rightpops=()
+  n_inds=$((${params.n_ind_per_pop} * 9 - 1))
+
+  ## Define rights and lefts
+  echo "popLefts:" >>pairwise_popConfigFile.txt
+  for idx in \$(seq 0 1 \${n_inds}); do
+    echo "  - <ind\${idx}>" >>pairwise_popConfigFile.txt
+  done
+
+  echo "popRights:" >>pairwise_popConfigFile.txt
+  for idx in \$(seq 0 1 \${n_inds}); do
+    echo "  - <ind\${idx}>" >>pairwise_popConfigFile.txt
+  done
+
+  echo "outgroup: <Ref>" >>pairwise_popConfigFile.txt
+
+  ## Run ras
+  ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir}/all_vars \
+    --popConfigFile pairwise_popConfigFile.txt \
+    --minAC 2 \
+    --maxAC ${params.max_ras_ac} \
+    -j CHR \
+    -f pairwise_ras_table.out \
+    --blockTableFile pairwise_blockTableFile.txt
+  """
+}
+
 process xerxes_ras {
   tag "n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/xerxes_ras", mode: 'copy'
@@ -68,7 +118,7 @@ process xerxes_ras {
   cpus 1
 
   input:
-  tuple variant_set, file(bed), file(bim), file(fam) from ch_input_datasets.rare
+  tuple variant_set, file(bed), file(bim), file(fam) from ch_input_xerxes_ras
 
   output:
   tuple variant_set, path("*.out") into (ch_xerxes_ras_output_for_matrix, ch_xerxes_ras_for_rasta)
