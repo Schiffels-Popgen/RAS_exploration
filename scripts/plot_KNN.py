@@ -15,14 +15,14 @@ def parse_knn_output(input_knn_file, summary_table):
     return (df)
 
 ## Function to create a compound KMM plot from the parsed input data.
-def plot_KNN (summary_table, snp_set_colours, chrom_length):
+def plot_KNN (summary_table, snp_set_colours, chrom_length, n_ind_per_pop):
     ax = summary_table.pivot(index="m", columns="snp_set", values="success_rate").plot.line(
       color=snp_set_colours, figsize=(15,10))
     ax.legend(title="Variant set")
     ax.set_xscale('log')
     ax.set_ylim(-0.05,1.05)
     fig = ax.get_figure()
-    fig.savefig("KNN_summary_plot.l{}.pdf".format(chrom_length))
+    fig.savefig("KNN_summary_plot.n{}_l{}.pdf".format(n_ind_per_pop, chrom_length))
 
 ##### MAIN #####
 import pandas as pd
@@ -39,7 +39,7 @@ if "-h" in args or "--help" in args or len(sys.argv) == 1:
   All arguments are positional. Multiple KNN logfiles can be provided one after another.
   
   Usage:
-  plot_KNN.py chrom_length input_matrix [input_matrix2 ..]
+  plot_KNN.py chrom_length n_ind_per_pop input_matrix [input_matrix2 ..]
   
   Options:
     -h,--help   Print this text and exit.
@@ -54,11 +54,19 @@ except ValueError:
   Execution halted.
   """)
 
-input_files=sys.argv[2:]
+try:
+  n_ind_per_pop=int(args[2])
+except ValueError:
+  print("""
+  ERROR: The second argument should be an integer equal to the number of sampled individuals in each of the 9 simulated populations.
+  Execution halted.
+  """)
+
+input_files=sys.argv[3:]
 
 summary_table = pd.DataFrame(columns=['snp_set', 'm', 'success_rate'])
 
 for file in input_files:
     summary_table=parse_knn_output(file, summary_table)
 
-plot_KNN (summary_table, snp_set_colours, chrom_length)
+plot_KNN (summary_table, snp_set_colours, chrom_length, n_ind_per_pop)

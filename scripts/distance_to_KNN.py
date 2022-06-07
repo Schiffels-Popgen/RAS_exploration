@@ -8,9 +8,10 @@ def perform_KNN(inputs, n_ind_per_pop, k):
     predictions={}
     for file in inputs:
         snp_set=re.sub(r'_[a-zA-Z_0-9.]*$','', file.split("/")[-1]) ## Infer snp_set form file name
-        if snp_set == "rare":
-            ac=file.split(".")[-2][-1] ## Infer AC from file name
-            snp_set=snp_set+"_ac"+ac
+        if snp_set == "twelve":
+          snp_set = "twelve_forty"
+            # ac=file.split(".")[-2][-1] ## Infer AC from file name
+            # snp_set=snp_set+"_ac"+ac
         predictions[snp_set]=k_nearest_neighbour(file, n_ind_per_pop, k)
     return (predictions) 
 

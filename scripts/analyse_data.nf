@@ -294,7 +294,7 @@ process do_MDS {
   executor 'local'
   
   input:
-  tuple variant_set, path(distance_matrices) from ch_distance_matrices_for_mds.collect()
+  path(distance_matrices) from ch_distance_matrices_for_mds.map{ it [1] }.collect()
 
   output:
   path('*pdf')
@@ -302,6 +302,54 @@ process do_MDS {
   script:
   """
   ${baseDir}/distance_to_MDS_plot.py ${params.four_mN} ${params.n_ind_per_pop} ${distance_matrices}
+  """
+}
+
+process do_KNN {
+  tag "${variant_set} n${params.n_ind_per_pop}_m${params.four_mN}_${snp_set}_l${params.chrom_length}"
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/KNN_classification", mode: 'copy'
+  memory '8GB'
+//  time '10m'
+  executor 'local'
+
+  
+  input:
+  tuple variant_set, path(distance_matrices) from ch_distance_matrices_for_knn
+
+  output:
+  path ('KNN*.txt') 
+  path ('') into ch_dummy_plotting_delay // Output goes into a dummy channel that is only used to delay the plotting of all the KNN results across all four_mN runs thus far.
+
+  script:
+  """
+  ${baseDir}/distance_to_KNN.py ${params.four_mN} ${params.n_ind_per_pop} ${variant_set} ${params.knn} ${distance_matrices}
+  """
+}
+
+/* Create a channel that picks up all KNN results from the same chrom_length regardless of four_mN value. 
+  In that channel, mix the dummy delay channel and fiter for unique files to avoid any duplications. */
+ch_for_knn_plotting=Channel.fromPath("${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/*/KNN_classification/KNN_K${params.knn}*.txt")
+          .mix(ch_dummy_plotting_delay)
+          .unique()
+/*          .dump(tag:"for KNN Plot")*/
+
+process plot_KNN {
+  tag "n${params.n_ind_per_pop} l${params.chrom_length}"
+  publishDir "${baseDir}/../plots/n${params.n_ind_per_pop}/${params.chrom_length}/KNN_classification/", mode: 'copy'
+  memory '8GB'
+//  time '10m'
+  executor 'local'
+
+
+  input:
+  path(knn_files) from ch_for_knn_plotting.collect()
+
+  output:
+  path('KNN_summary_plot*pdf')
+
+  script:
+  """
+  ${baseDir}/plot_KNN.py ${params.chrom_length} ${knn_files}
   """
 }
 
