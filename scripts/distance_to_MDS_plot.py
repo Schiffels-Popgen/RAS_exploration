@@ -6,6 +6,8 @@ def read_matrices(inputs): ## inputs should be a list of file names
     dm={}
     for file in inputs:
         snp_set=re.sub(r'_[a-zA-Z_0-9.]*$','', file) ## Infer snp_set from file name
+        if snp_set == "twelve":
+          snp_set="twelve_forty"
         input_matrix = pd.read_csv(file, sep="\t", header=None)
         # np.fill_diagonal(input_matrix.values, 0) ## Matrices should already have 0 diagonals.
         dm[snp_set]=input_matrix
@@ -21,7 +23,7 @@ def do_mds(dm, m, population_colours, num_dim = 2, num_inds_per_pop = 20):
 
     f.set_figheight(7.5)
     f.set_figwidth(5*7.5)
-    plot_column={"all":ax1, "all.rascal":ax2, "common":ax3, "1240k":ax4, "rare":ax5}
+    plot_column={"all":ax1, "all.rascal":ax2, "common":ax3, "twelve_forty":ax4, "rare":ax5}
 
     for snp_set,matrix in dm.items():
         x_2d[snp_set]=pcoa(matrix, number_of_dimensions = num_dim)
