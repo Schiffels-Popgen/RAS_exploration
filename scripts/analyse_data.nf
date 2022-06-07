@@ -69,7 +69,7 @@ ch_input_datasets.common
 ch_input_datasets.rare
   .into { ch_input_for_xerxes_ras; ch_input_xerxes_pairwise_ras; }
 process xerxes_pairwise_ras {
-  tag "n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
+  tag "${variant_set}_n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/xerxes_ras", mode: 'copy'
   memory '8GB'
   cpus 1
@@ -117,7 +117,7 @@ process xerxes_pairwise_ras {
 }
 
 process xerxes_ras {
-  tag "n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
+  tag "${variant_set}_n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/xerxes_ras", mode: 'copy'
   memory '8GB'
   cpus 1
@@ -189,8 +189,7 @@ process xerxes_f3 {
   ## Create statFile
   ## Create overall poplist
   for i in \$(seq 0 1 ${num_inds}); do
-    lower_bound=\$(expr \${i} + 1)
-    for j in \$(seq \${lower_bound} 1 ${num_inds}); do
+    for j in \$(seq 0 1 ${num_inds}); do
       echo -e "F3vanilla(<ind\${i}>, <ind\${j}>, Ref)"
     done
   done >pairwise_poplist.txt
@@ -209,7 +208,7 @@ process xerxes_f3 {
 process xerxes_f4 {
   tag "${variant_set} n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/xerxes_f3", mode: 'copy'
-  memory '8GB'
+  memory '16GB'
   cpus 1
 //  executor 'local'
 
@@ -240,5 +239,49 @@ process xerxes_f4 {
     --statFile pairwise_poplist.txt \
     -j CHR \
     -f f4_table_${variant_set}.out
+  """
+}
+
+
+// Mix pairwise f3 and ras outputs
+ch_input_for_make_similarity_matrices = ch_xerxes_fstats_output_for_matrix
+    .mix(ch_xerxes_pairwise_ras_output_for_matrix)
+    .dump(tag:"ch_input_for_make_similarity_matrices")
+
+process make_similarity_matrix {
+  tag "${variant_set} n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/similarity_matrices", mode: 'copy'
+  memory '1GB'
+  cpus 1
+  executor 'local'
+
+  input:
+  tuple variant_set, file(pairwise_table) from ch_input_for_make_similarity_matrices
+
+  output:
+  tuple variant_set, file("*_similarity_matrix.txt") into ch_similarity_matrices
+
+  script:
+  """
+  ${baseDir}/make_similarity_matrices.R ${variant_set} ${pairwise_table}
+  """
+}
+
+process make_distance_matrices {
+  tag "${variant_set} n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}/distance_matrices", mode: 'copy'
+  memory '1GB'
+  cpus 1
+  executor 'local'
+
+  input:
+  tuple variant_set, file(similarity_matrix) from ch_similarity_matrices
+
+  output:
+  tuple variant_set, file("*_distance_matrix.txt") into (ch_distance_matrices_for_knn, ch_distance_matrices_for_mds)
+
+  script:
+  """
+  ${baseDir}/similarity_to_distance.py ${variant_set} ${similarity_matrix}
   """
 }
