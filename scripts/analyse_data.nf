@@ -285,3 +285,23 @@ process make_distance_matrices {
   ${baseDir}/similarity_to_distance.py ${variant_set} ${similarity_matrix}
   """
 }
+
+process do_MDS {
+  tag "n${params.n_ind_per_pop}_m${params.four_mN}_l${params.chrom_length}"
+  publishDir "${baseDir}/../plots/n${params.n_ind_per_pop}/${params.chrom_length}/MDS/", mode: 'copy'
+  memory '8GB'
+  cpus 1
+  executor 'local'
+  
+  input:
+  tuple variant_set, path(distance_matrices) from ch_distance_matrices_for_mds.collect()
+
+  output:
+  path('*pdf')
+
+  script:
+  """
+  ${baseDir}/distance_to_MDS_plot.py ${params.four_mN} ${params.n_ind_per_pop} ${distance_matrices}
+  """
+}
+
