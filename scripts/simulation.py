@@ -79,7 +79,7 @@ trees=pop_model_scaled(
                 sample_sizes=sample_sizes,
                 four_mN=four_mN,
                 mutation_rate=1.1e-8,
-                recombination_rate=2e-8,
+                recombination_rate=1e-8,
                 length=chrom_length,
                 chrom_name=chrom_name
                )
