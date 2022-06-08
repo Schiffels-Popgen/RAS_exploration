@@ -349,7 +349,7 @@ process plot_KNN {
 
   script:
   """
-  ${baseDir}/plot_KNN.py ${params.chrom_length} ${knn_files}
+  ${baseDir}/plot_KNN.py ${params.chrom_length} ${params.n_ind_per_pop} ${knn_files}
   """
 }
 
