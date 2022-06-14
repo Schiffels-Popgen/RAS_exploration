@@ -50,7 +50,7 @@ process msprime{
   
   tag "n${params.n_ind_per_pop}_m${four_mN}_chr${chrom_name}_l${chrom_tag}"
   // publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}", mode: 'copy'
-  memory '8GB'
+  memory '10GB'
   // executor 'local'
 
   input:
