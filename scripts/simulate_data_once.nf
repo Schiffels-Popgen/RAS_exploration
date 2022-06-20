@@ -76,7 +76,7 @@ process make_1240k{
   tag "n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
   publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}", mode: 'copy'
   memory '1GB'
-  executor 'local'
+  // executor 'local'
 
   input:
   tuple val(four_mN), path(genos) from ch_common_vars_geno_for_1240k.groupTuple(by:0)//.dump(tag:"make_1240k_input_geno")
@@ -111,7 +111,7 @@ process merge_chroms_common_vars {
   publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/", mode: 'copy'
   memory '50MB'
   cpus 1
-  executor 'local'
+  // executor 'local'
 
   input:
   tuple val(four_mN), path(genos) from ch_common_vars_geno.groupTuple(by:0)//.dump(tag:"merge_common_input_geno")
@@ -140,7 +140,7 @@ process merge_chroms_all_vars {
   publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/", mode: 'copy'
   memory '50MB'
   cpus 1
-  executor 'local'
+  // executor 'local'
 
   input:
   tuple val(four_mN), path(genos) from ch_all_vars_geno.groupTuple(by:0)//.dump(tag:"merge_all_input_geno")
@@ -171,9 +171,9 @@ ch_all_vars_datasets
 process create_poseidon_packages {
   tag "${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
   publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/poseidon", mode: 'copy'
-  memory '50MB'
+  memory '4GB'
   cpus 1
-  executor 'local'
+  // executor 'local'
 
   input:
   tuple chroms, four_mN, variant_set, path(geno), path(snp), path(ind) from ch_datasets
@@ -207,9 +207,9 @@ ch_subsampling_dataset = Channel.fromList( [10,20,50,100,200] )
 process subsample_datasets{
   tag "${variant_set}_m${four_mN}_n${n}_l${chrom_tag}"
   publishDir "${baseDir}/../data/n${n}/${chrom_tag}/${four_mN}/poseidon", mode: 'copy'
-  memory '50MB'
+  memory '4GB'
   cpus 1
-  executor 'local'
+  // executor 'local'
 
   input:
   tuple val(n), chroms, four_mN, variant_set, path(geno), path(snp), path(ind) from ch_subsampling_dataset
