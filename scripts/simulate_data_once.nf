@@ -171,7 +171,7 @@ ch_all_vars_datasets
 process create_poseidon_packages {
   tag "${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
   publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/poseidon", mode: 'copy'
-  memory '4GB'
+  memory '1GB'
   cpus 1
   // executor 'local'
 
@@ -179,24 +179,20 @@ process create_poseidon_packages {
   tuple chroms, four_mN, variant_set, path(geno), path(snp), path(ind) from ch_datasets
 
   output:
-  tuple path("${variant_set}/${pkg_name}.bed"), path("${variant_set}/${pkg_name}.bim"), path("${variant_set}/${pkg_name}.fam"), path("${variant_set}/${pkg_name}.geno"), path("${variant_set}/${pkg_name}.snp"), path("${variant_set}/${pkg_name}.ind"), path("${variant_set}/${pkg_name}.janno"), path("${variant_set}/${pkg_name}.bib"), path("${variant_set}/POSEIDON.yml")
+  tuple path("${variant_set}/${pkg_name}.bed"), path("${variant_set}/${pkg_name}.bim"), path("${variant_set}/${pkg_name}.fam"), path("${pkg_name}.geno"), path("${pkg_name}.snp"), path("${pkg_name}.ind"), path("${variant_set}/POSEIDON.yml")
 
   script:
   pkg_name="${variant_set}_m${four_mN}_l${params.chrom_length}"
   """
   ## trident creates the package within the work directory, and nextflow is responsible for putting it in the data dir.
-  ${params.poseidon_exec_dir}/trident init --inFormat EIGENSTRAT \
-      --snpSet Other \
-      --genoFile ${pkg_name}.geno \
-      --snpFile ${pkg_name}.snp \
-      --indFile ${pkg_name}.ind \
-      -o ${variant_set} \
-      -n ${pkg_name}
-  
-  ## Convert to plink format for faster computation with xerxes.
-  ${params.poseidon_exec_dir}/trident genoconvert \
-      --outFormat PLINK \
-      -d .
+  ## Skip genoconvert by using forge to covert to plink on the fly (v1.0.0.0+). 
+  ##    The original data is then copied over by nextflow into the package dir to have also eigenstrat format.
+
+    ${params.poseidon_exec_dir}/trident forge -d . \
+        -p ${pkg_name}.geno \
+        -o ${variant_set} \
+        -n ${pkg_name} \
+        --minimal ## No janno or bib file
   """
 }
 
@@ -207,7 +203,7 @@ ch_subsampling_dataset = Channel.fromList( [10,20,50,100,200] )
 process subsample_datasets{
   tag "${variant_set}_m${four_mN}_n${n}_l${chrom_tag}"
   publishDir "${baseDir}/../data/n${n}/${chrom_tag}/${four_mN}/poseidon", mode: 'copy'
-  memory '4GB'
+  memory '1GB'
   cpus 1
   // executor 'local'
 
@@ -215,7 +211,7 @@ process subsample_datasets{
   tuple val(n), chroms, four_mN, variant_set, path(geno), path(snp), path(ind) from ch_subsampling_dataset
 
   output:
-  tuple path("${variant_set}/${pkg_name}.bed"), path("${variant_set}/${pkg_name}.bim"), path("${variant_set}/${pkg_name}.fam"), path("${variant_set}/${pkg_name}.geno"), path("${variant_set}/${pkg_name}.snp"), path("${variant_set}/${pkg_name}.ind"), path("${variant_set}/${pkg_name}.janno"), path("${variant_set}/${pkg_name}.bib"), path("${variant_set}/POSEIDON.yml")
+  tuple path("${variant_set}/${pkg_name}.bed"), path("${variant_set}/${pkg_name}.bim"), path("${variant_set}/${pkg_name}.fam"), path("downsampled_data/${pkg_name}.geno"), path("downsampled_data/${pkg_name}.snp"), path("downsampled_data/${pkg_name}.ind"), path("${variant_set}/POSEIDON.yml")
   
   script:
   pkg_name="${variant_set}_m${four_mN}_l${params.chrom_length}"
@@ -244,18 +240,12 @@ process subsample_datasets{
   ## Dowsample .ind
   sed -n "\${iidxs}" ${ind} >downsampled_data/${pkg_name}.ind
 
-  ## Create subsetted poseidon package
-  ${params.poseidon_exec_dir}/trident init --inFormat EIGENSTRAT \
-      --snpSet Other \
-      --genoFile downsampled_data/${pkg_name}.geno \
-      --snpFile downsampled_data/${pkg_name}.snp \
-      --indFile downsampled_data/${pkg_name}.ind \
+  ## Skip genoconvert by using forge to covert to plink on the fly (v1.0.0.0+). 
+  ##    The original data is then copied over by nextflow into the package dir to have also eigenstrat format.
+  ${params.poseidon_exec_dir}/trident forge -d . \
+      -p downsampled_data/${pkg_name}.geno \
       -o ${variant_set} \
-      -n ${pkg_name}
-
-  ## Convert to plink format for faster computation with xerxes.
-  ${params.poseidon_exec_dir}/trident genoconvert \
-      --outFormat PLINK \
-      -d .
+      -n ${pkg_name} \
+      --minimal ## No janno or bib file
   """
 }
