@@ -67,9 +67,27 @@ ch_input_datasets = Channel.fromList(["all_vars", "common_vars", "twelve_forty_v
         [ variant_set, four_mN, package_dir, bed, bim, fam ]
       }
       .branch{
-        rare: it[0] == "rare_vars"
-        common: true
+          all: it[0] == "all_vars"
+          other: true
       }
+ch_af_cutoffs = Channel.from( [0.01, 0.02, 0.05, 0.10, 0.15, 0.2, 0.3, 0.4, 0.5, 0.8] )
+          .merge(Channel.from( [0.02, 0.05, 0.10, 0.15, 0.2 , 0.3, 0.4, 0.5, 0.8, 1.0]))
+
+ch_input_datasets.all
+      .combine(ch_af_cutoffs)
+      .mix(ch_input_datasets.other.map{
+        variant_set, four_mN, package_dir, bed, bim, fam ->
+        def minAF = variant_set == "rare_vars" ? 2 : 0.0
+        def maxAF = variant_set == "rare_vars" ? params.max_ras_ac : 1.0
+        [ variant_set, four_mN, package_dir, bed, bim, fam , minAF, maxAF] //Dummy AF values for common vars.
+      }
+      )
+      .into { ch_input_for_xerxes_ras; ch_input_xerxes_pairwise_ras; ch_for_combining; ch_input_for_AF_cutoffs}
+      // .branch{
+      //   rare: it[0] == "rare_vars"
+      //   common: true
+      // }
+
 
 // This might be overkill, but split f3/f4 runs to only run statistics with 1 individual at position A. Then merge all logfiles together later
 // First create a channel of the individuals in this (potentially subsampled) dataset.
@@ -81,350 +99,401 @@ ch_individuals = Channel.from( 0..8 )
                               actual_ind
                           }
 
-ch_input_datasets.common
+ch_for_combining
   .combine(ch_individuals) 
   .into{ ch_input_for_xerxes_f3; ch_input_for_xerxes_f4; }
 
-ch_input_datasets.rare
-  .into { ch_input_for_xerxes_ras; ch_input_xerxes_pairwise_ras; }
-
 process xerxes_pairwise_ras {
-  tag "${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
+  tag "${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}_m${minAF}_M${maxAF}"
   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_ras", mode: 'copy'
-  memory '8GB'
+  memory '64GB'
   cpus 1
 //  executor 'local'
 
   input:
-  tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam) from ch_input_xerxes_pairwise_ras
+  tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam), val(minAF), val(maxAF) from ch_input_xerxes_pairwise_ras
   // tuple val(variant_set), val(four_mN), val(n_ind_per_pop), val(package_dir), path(bed), path(bim), path(fam) from ch_input_xerxes_pairwise_ras
 
   output:
-  tuple variant_set, four_mN, path("pairwise_*.out") into (ch_xerxes_pairwise_ras_output_for_matrix)
-  file "pairwise_popConfigFile.txt"
-  file "pairwise_blockTableFile.txt"
+  tuple variant_set, four_mN, path("pairwise_ras_table_${variant_set}_m${minAF}_M${maxAF}.out") into (ch_xerxes_pairwise_ras_output_for_matrix)
+  file "pairwise_popConfigFile_${variant_set}.txt"
+  // file "pairwise_blockTableFile_${variant_set}_m${minAF}_M${maxAF}.txt"
 
   script:
-
+  def freq_cutoffs = variant_set == "rare_vars" ? "--minAC ${minAF} --maxAC ${maxAF}" : variant_set == "all_vars" ? "--minAF ${minAF} --maxAF ${maxAF}" : "--noMinFreq --noMaxFreq"
   """
   ## Create population definitions file. Each pop consists of all but the last individual. The first individual of a pop is used as a left pop.
-  echo "groupDefs:" >pairwise_popConfigFile.txt
+  echo "groupDefs:" >pairwise_popConfigFile_${variant_set}.txt
   leftpops=()
   rightpops=()
   n_inds=\$((${params.n_ind_per_pop} * 9 - 1))
 
   ## Define rights and lefts
-  echo "popLefts:" >>pairwise_popConfigFile.txt
+  echo "popLefts:" >>pairwise_popConfigFile_${variant_set}.txt
   for p in \$(seq 0 1 8); do
     idx=\$(( \${p} * ${params.total_inds_per_pop}))
     for j in \$(seq \${idx} 1 \$(( \${idx}+${params.n_ind_per_pop}-1)) ); do
-      echo "  - <ind\${j}>" >>pairwise_popConfigFile.txt
+      echo "  - <ind\${j}>" >>pairwise_popConfigFile_${variant_set}.txt
     done
   done
 
-  echo "popRights:" >>pairwise_popConfigFile.txt
+  echo "popRights:" >>pairwise_popConfigFile_${variant_set}.txt
   for p in \$(seq 0 1 8); do
     idx=\$(( \${p} * ${params.total_inds_per_pop}))
     for j in \$(seq \${idx} 1 \$(( \${idx}+${params.n_ind_per_pop}-1)) ); do
-      echo "  - <ind\${j}>" >>pairwise_popConfigFile.txt
+      echo "  - <ind\${j}>" >>pairwise_popConfigFile_${variant_set}.txt
     done
   done
 
-  echo "outgroup: <Ref>" >>pairwise_popConfigFile.txt
+  echo "outgroup: <Ref>" >>pairwise_popConfigFile_${variant_set}.txt
 
   ## Run ras
   ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir}/ \
-    --popConfigFile pairwise_popConfigFile.txt \
-    --minAC 2 \
-    --maxAC ${params.max_ras_ac} \
+    --popConfigFile pairwise_popConfigFile_${variant_set}.txt \
+    ${freq_cutoffs} \
     -j CHR \
-    -f pairwise_ras_table.out \
-    --blockTableFile pairwise_blockTableFile.txt
+    ## --blockTableFile pairwise_blockTableFile_${variant_set}_m${minAF}_M${maxAF}.txt \
+    > pairwise_ras_table_${variant_set}_m${minAF}_M${maxAF}.out
   """
 }
 
 process xerxes_ras {
-  tag "${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
+  tag "${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}_m${minAF}_M${maxAF}"
   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_ras", mode: 'copy'
   memory '8GB'
   cpus 1
-//  executor 'local'
 
   input:
-  tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam) from ch_input_for_xerxes_ras
+  tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam), val(minAF), val(maxAF) from ch_input_for_xerxes_ras
 
   output:
-  tuple variant_set, four_mN, path("*.out") into (ch_xerxes_ras_output_for_matrix, ch_xerxes_ras_for_rasta)
-  file "popConfigFile.txt"
-  file "blockTableFile.txt"
+  tuple variant_set, four_mN, path("ras_table_${variant_set}_m${minAF}_M${maxAF}.out") into (ch_xerxes_ras_output_for_matrix, ch_xerxes_ras_for_rasta)
+  file "popConfigFile_${variant_set}.txt"
+  // file "blockTableFile_${variant_set}.txt"
+  file "rasta_table_${variant_set}_m${minAF}_M${maxAF}.out"
 
-  script: 
+  script:
+  def freq_cutoffs = variant_set == "rare_vars" ? "--minAC ${minAF} --maxAC ${maxAF}" : variant_set == "all_vars" ? "--minAF ${minAF} --maxAF ${maxAF}" : "--noMinFreq --noMaxFreq"
   """
-  ## Create population definitions file. Each pop consists of all but the last individual. The first individual of a pop is used as a left pop.
-  echo "groupDefs:" >popConfigFile.txt
+  ## Create population definitions file. Each pop consists of all but the last individual. The first two individuals of a pop is used as a left pop.
+  echo "groupDefs:" >popConfigFile_${variant_set}.txt
   leftpops=()
   rightpops=()
   for pop in {0..8}; do
     excluded_ind='-<ind'\$((${params.total_inds_per_pop} * \${pop}))'>'
-    echo -e "  Pop\${pop}Rest: Pop\${pop},\${excluded_ind}" >>popConfigFile.txt
+    excluded_ind2='-<ind'\$((${params.total_inds_per_pop} * \${pop} + 1))'>'
+    echo -e "  Pop\${pop}Rest: [ Pop\${pop},\${excluded_ind},\${excluded_ind2} ]" >>popConfigFile_${variant_set}.txt
     leftpops+=(\${excluded_ind#"-"}) ## Add excluded ind to lefts without the leading "-"
+    leftpops+=(\${excluded_ind2#"-"}) ## Add excluded ind to lefts without the leading "-"
     rightpops+=(Pop\${pop}Rest) ## Add created population into rights
   done
 
   ## Define rights and lefts
-  echo "popLefts:" >>popConfigFile.txt
+  echo "popLefts:" >>popConfigFile_${variant_set}.txt
   for left in \${leftpops[@]}; do
-    echo "  - \${left}" >>popConfigFile.txt
-  done
-  for right in \${rightpops[@]}; do
-    echo "  - \${right}" >>popConfigFile.txt
+    echo "  - \${left}" >>popConfigFile_${variant_set}.txt
   done
 
-  echo "popRights:" >>popConfigFile.txt
+  echo "popRights:" >>popConfigFile_${variant_set}.txt
   for right in \${rightpops[@]}; do
-    echo "  - \${right}" >>popConfigFile.txt
+    echo "  - \${right}" >>popConfigFile_${variant_set}.txt
   done
 
-  echo "outgroup: <Ref>" >>popConfigFile.txt
+  echo "outgroup: <Ref>" >>popConfigFile_${variant_set}.txt
 
   ## Run ras
   ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir}/ \
-    --popConfigFile popConfigFile.txt \
-    --minAC 2 \
-    --maxAC ${params.max_ras_ac} \
+    --popConfigFile popConfigFile_${variant_set}.txt \
+    ${freq_cutoffs} \
     -j CHR \
-    -f ras_table.out \
-    --blockTableFile blockTableFile.txt
+    ## --blockTableFile blockTableFile_${variant_set}.txt \
+    --f4TableOutFile rasta_table_${variant_set}_m${minAF}_M${maxAF}.out \
+    > ras_table_${variant_set}_m${minAF}_M${maxAF}.out
   """
 }
 
-process xerxes_f3 {
-  tag "ind${ind_id} ${variant_set} n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
-  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_f3/individual_f3", mode: 'copy'
-  memory '8GB'
-  cpus 1
-//  executor 'local'
+// process xerxes_f4 {
+//   tag "ind${ind_id} ${variant_set} n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
+//   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_f3/individual_f3", mode: 'copy'
+//   memory '8GB'
+//   cpus 1
 
-  input:
-  tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam), val(ind_id) from ch_input_for_xerxes_f3
+//   input:
+//   tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam), val(ind_id) from ch_input_for_xerxes_f3
 
-  output:
-  tuple variant_set, four_mN, ind_id, path("*.out") into (ch_xerxes_individual_f3)
+//   output:
+//   tuple variant_set, four_mN, ind_id, path("*.out") into (ch_xerxes_individual_f3)
 
-  script:
-  """
-  ## Create statFile
-  ## Create overall poplist
-  ## Because the individuals are downsampled from the complete simulation, they are not sequential between pops.
-  ##    For every pop, reseet index to next 500 multiple and then count the first X individuals from that.
-  for p in \$(seq 0 1 8); do
-    idx=\$(( \${p} * ${params.total_inds_per_pop}))
-    for j in \$(seq \${idx} 1 \$(( \${idx}+${params.n_ind_per_pop}-1)) ); do
-      echo "F3vanilla(<ind${ind_id}>, <ind\${j}>, Ref)"
-    done
-  done >pairwise_poplist.ind${ind_id}.txt
+//   script:
+//   """
+//   ## Function to join by multi-character sep
+//   function join_by {
+//     local d=\${1-} f=\${2-}
+//     if shift 2; then
+//       printf %s "\${f}" "\${@/#/\${d}}"
+//     fi
+//   }
 
-  ## Remove the last byte (i.e. the final newline character) from the statFile
-  truncate -s -1 pairwise_poplist.ind${ind_id}.txt
+//   ## Create population definitions file (requires xerxes 0.2.0.0)
+//   leftpops=()
+//   rightpops=()
+//   ascertainOn=''
+//   echo "groupDefs:" >>popConfigFile_${ind_id}.txt
+//   for pop in {0..8}; do
+//     excluded_ind='-<ind'\$((${params.total_inds_per_pop} * \${pop}))'>'
+//     excluded_ind2='-<ind'\$((${params.total_inds_per_pop} * \${pop} + 1))'>'
+//     echo -e "  Pop\${pop}Rest:[ \"Pop\${pop}\",\"\${excluded_ind}\",\"\${excluded_ind2}\" ]" >>popConfigFile_${ind_id}.txt
+//     leftpops+=(\${excluded_ind#"-"}) ## Add excluded ind to lefts without the leading "-"
+//     leftpops+=(\${excluded_ind2#"-"}) ## Add second excluded ind to lefts without the leading "-"
+//     rightpops+=(Pop\${pop}Rest) ## Add created population into rights
+//     ascertainOn+='"Pop\${pop}Rest", '
+//   done
+//   ## One more group definition of all pops for ascertainment
+//   echo "AscertainOn: [ \${ascertainOn%, } ]" >>popConfigFile_${ind_id}.txt
 
-  ## Run f3
-  ${params.poseidon_exec_dir}/xerxes fstats -d ${package_dir}/ \
-    --statFile pairwise_poplist.ind${ind_id}.txt \
-    -j CHR \
-    -f f3_table_${variant_set}.ind${ind_id}.out
-  """
-}
-
-process xerxes_f4 {
-  tag "ind${ind_id} ${variant_set} n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
-  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_f3/individual_f4", mode: 'copy'
-  memory '16GB'
-  cpus 1
-//  executor 'local'
-
-  input:
-  tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam), val(ind_id) from ch_input_for_xerxes_f4
-
-  output:
-  tuple variant_set, four_mN, ind_id, path("*.out") into (ch_xerxes_individual_f4)
-
-  script:
-  """
-  ## Create statFile
-  for b in \$(seq 0 1 8); do
-    for c in \$(seq 0 1 8); do
-      if [[ ! "\${b}" == "\${c}" ]]; then
-        echo -e "F4(<ind${ind_id}>, Pop\${b}, Pop\${c}, Ref)"
-      fi
-    done
-  done >pairwise_poplist.ind${ind_id}.txt
-
-  ## Remove the last byte (i.e. the final newline character) from the statFile
-  truncate -s -1 pairwise_poplist.ind${ind_id}.txt
-
-  ## Run f4
-  ${params.poseidon_exec_dir}/xerxes fstats -d ${package_dir}/ \
-    --statFile pairwise_poplist.ind${ind_id}.txt \
-    -j CHR \
-    -f f4_table_${variant_set}.ind${ind_id}.out
-  """
-}
-
-ch_xerxes_f3_for_merging = ch_xerxes_individual_f3
-                            .groupTuple(by:[0,1]) // each element is now all individual f4 outputs across a variant_set/four_mN combination
-                            .dump(tag:"ch_xerxes_f3_for_merging")
+//   echo "fstats:" >>popConfigFile_${ind_id}.txt
+//   echo "- type: F4" >>popConfigFile_${ind_id}.txt
+//   echo "  a: [ \" \$(join_by '\",\"' \${leftpops[@]}) \" ]" >>popConfigFile_${ind_id}.txt
+//   echo "  b: [ \" \$(join_by '\",\"' \${rightpops[@]}) \" ]" >>popConfigFile_${ind_id}.txt
+//   echo "  c: [ \"Ref\" ]" >>popConfigFile_${ind_id}.txt
+//   echo "  ascertainment:" >>popConfigFile_${ind_id}.txt
+//   echo "    outgroup: \"Ref\"" >>popConfigFile_${ind_id}.txt
+//   echo "    reference: \"AscertainOn\"" >>popConfigFile_${ind_id}.txt
+//   echo "    lower: 0.05 >>popConfigFile_${ind_id}.txt
+//   echo "    upper: 0.95 >>popConfigFile_${ind_id}.txt
 
 
-ch_xerxes_f4_for_merging = ch_xerxes_individual_f4
-                            .groupTuple(by:[0,1]) // each element is now all individual f4 outputs across a variant_set/four_mN combination
-                            .dump(tag:"ch_xerxes_f4_for_merging")
 
-process merge_f3 {
-  tag "${variant_set} n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
-  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_f3", mode: 'copy'
-  memory '1GB'
-  cpus 1
-  executor 'local' // No need to batch a simple cat command
+//   """
+// }
 
-  input:
-  tuple variant_set, four_mN, ind_id, path(individual_f3_fn) from ch_xerxes_f3_for_merging
+// process xerxes_f3 {
+//   tag "ind${ind_id} ${variant_set} n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
+//   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_f3/individual_f3", mode: 'copy'
+//   memory '8GB'
+//   cpus 1
+// //  executor 'local'
 
-  output:
-  tuple  variant_set, four_mN,  path("f3_table_${variant_set}.out") into (ch_xerxes_fstats_output_for_matrix, ch_xerxes_fstats_for_rasta)
+//   input:
+//   tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam), val(ind_id) from ch_input_for_xerxes_f3
 
-  script:
-  """
+//   output:
+//   tuple variant_set, four_mN, ind_id, path("*.out") into (ch_xerxes_individual_f3)
+
+//   script:
+//   """
+//   ## Create statFile
+//   ## Create overall poplist
+//   ## Because the individuals are downsampled from the complete simulation, they are not sequential between pops.
+//   ##    For every pop, reseet index to next 500 multiple and then count the first X individuals from that.
+//   for p in \$(seq 0 1 8); do
+//     idx=\$(( \${p} * ${params.total_inds_per_pop}))
+//     for j in \$(seq \${idx} 1 \$(( \${idx}+${params.n_ind_per_pop}-1)) ); do
+//       echo "F3vanilla(<ind${ind_id}>, <ind\${j}>, Ref)"
+//     done
+//   done >pairwise_poplist_${variant_set}.ind${ind_id}.txt
+
+//   ## Remove the last byte (i.e. the final newline character) from the statFile
+//   truncate -s -1 pairwise_poplist_${variant_set}.ind${ind_id}.txt
+
+//   ## Run f3
+//   ${params.poseidon_exec_dir}/xerxes fstats -d ${package_dir}/ \
+//     --statFile pairwise_poplist_${variant_set}.ind${ind_id}.txt \
+//     -j CHR \
+//     > f3_table_${variant_set}.ind${ind_id}.out
+//   """
+// }
+
+// process xerxes_f4 {
+//   tag "ind${ind_id} ${variant_set} n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
+//   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_f3/individual_f4", mode: 'copy'
+//   memory '16GB'
+//   cpus 1
+// //  executor 'local'
+
+//   input:
+//   tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam), val(ind_id) from ch_input_for_xerxes_f4
+
+//   output:
+//   tuple variant_set, four_mN, ind_id, path("*.out") into (ch_xerxes_individual_f4)
+
+//   script:
+//   """
+//   ## Create statFile
+//   for b in \$(seq 0 1 8); do
+//     for c in \$(seq 0 1 8); do
+//       if [[ ! "\${b}" == "\${c}" ]]; then
+//         echo -e "F4(<ind${ind_id}>, Pop\${b}, Pop\${c}, Ref)"
+//       fi
+//     done
+//   done >pairwise_poplist_${variant_set}.ind${ind_id}.txt
+
+//   ## Remove the last byte (i.e. the final newline character) from the statFile
+//   truncate -s -1 pairwise_poplist_${variant_set}.ind${ind_id}.txt
+
+//   ## Run f4
+//   ${params.poseidon_exec_dir}/xerxes fstats -d ${package_dir}/ \
+//     --statFile pairwise_poplist_${variant_set}.ind${ind_id}.txt \
+//     -j CHR \
+//     -f f4_table_${variant_set}.ind${ind_id}.out
+//   """
+// }
+
+// ch_xerxes_f3_for_merging = ch_xerxes_individual_f3
+//                             .groupTuple(by:[0,1]) // each element is now all individual f4 outputs across a variant_set/four_mN combination
+//                             .dump(tag:"ch_xerxes_f3_for_merging")
+
+
+// ch_xerxes_f4_for_merging = ch_xerxes_individual_f4
+//                             .groupTuple(by:[0,1]) // each element is now all individual f4 outputs across a variant_set/four_mN combination
+//                             .dump(tag:"ch_xerxes_f4_for_merging")
+
+// process merge_f3 {
+//   tag "${variant_set} n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
+//   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_f3", mode: 'copy'
+//   memory '1GB'
+//   cpus 1
+//   executor 'local' // No need to batch a simple cat command
+
+//   input:
+//   tuple variant_set, four_mN, ind_id, path(individual_f3_fn) from ch_xerxes_f3_for_merging
+
+//   output:
+//   tuple  variant_set, four_mN,  path("f3_table_${variant_set}.out") into (ch_xerxes_fstats_output_for_matrix, ch_xerxes_fstats_for_rasta)
+
+//   script:
+//   """
   
-  cat  f3_table_${variant_set}.*.out > f3_table_${variant_set}.out
-  """
-}
+//   cat  f3_table_${variant_set}.*.out > f3_table_${variant_set}.out
+//   """
+// }
 
-process merge_f4 {
-  tag "${variant_set} n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
-  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_f3", mode: 'copy'
-  memory '1GB'
-  cpus 1
-  executor 'local' // No need to batch a simple cat command
+// process merge_f4 {
+//   tag "${variant_set} n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
+//   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_f3", mode: 'copy'
+//   memory '1GB'
+//   cpus 1
+//   executor 'local' // No need to batch a simple cat command
 
-  input:
-  tuple variant_set, four_mN, ind_id, path(individual_f4_fn) from ch_xerxes_f4_for_merging
+//   input:
+//   tuple variant_set, four_mN, ind_id, path(individual_f4_fn) from ch_xerxes_f4_for_merging
 
-  output:
-  tuple  variant_set, four_mN,  path("f4_table_${variant_set}.out") into (ch_xerxes_f4_output)
+//   output:
+//   tuple  variant_set, four_mN,  path("f4_table_${variant_set}.out") into (ch_xerxes_f4_output)
 
-  script:
-  """
-  cat  f4_table_${variant_set}.*.out > f4_table_${variant_set}.out
-  """
-}
+//   script:
+//   """
+//   cat  f4_table_${variant_set}.*.out > f4_table_${variant_set}.out
+//   """
+// }
 
-// Mix pairwise f3 and ras outputs
-ch_input_for_make_similarity_matrices = ch_xerxes_fstats_output_for_matrix
-    .mix(ch_xerxes_pairwise_ras_output_for_matrix)
-    .dump(tag:"ch_input_for_make_similarity_matrices")
+// // Mix pairwise f3 and ras outputs
+// ch_input_for_make_similarity_matrices = ch_xerxes_fstats_output_for_matrix
+//     .mix(ch_xerxes_pairwise_ras_output_for_matrix)
+//     .dump(tag:"ch_input_for_make_similarity_matrices")
 
-process make_similarity_matrix {
-  tag "${variant_set} n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
-  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/similarity_matrices", mode: 'copy'
-  memory '1GB'
-  cpus 1
-  executor 'local'
+// process make_similarity_matrix {
+//   tag "${variant_set} n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
+//   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/similarity_matrices", mode: 'copy'
+//   memory '1GB'
+//   cpus 1
+//   executor 'local'
 
-  input:
-  tuple variant_set, four_mN, file(pairwise_table) from ch_input_for_make_similarity_matrices
+//   input:
+//   tuple variant_set, four_mN, file(pairwise_table) from ch_input_for_make_similarity_matrices
 
-  output:
-  tuple variant_set, four_mN, file("*_similarity_matrix.txt") into ch_similarity_matrices
+//   output:
+//   tuple variant_set, four_mN, file("*_similarity_matrix.txt") into ch_similarity_matrices
 
-  script:
-  """
-  ${baseDir}/make_similarity_matrices.R ${variant_set} ${pairwise_table}
-  """
-}
+//   script:
+//   """
+//   ${baseDir}/make_similarity_matrices.R ${variant_set} ${pairwise_table}
+//   """
+// }
 
-process make_distance_matrices {
-  tag "${variant_set} n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
-  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/distance_matrices", mode: 'copy'
-  memory '1GB'
-  cpus 1
-  executor 'local'
+// process make_distance_matrices {
+//   tag "${variant_set} n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
+//   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/distance_matrices", mode: 'copy'
+//   memory '1GB'
+//   cpus 1
+//   executor 'local'
 
-  input:
-  tuple variant_set, four_mN, file(similarity_matrix) from ch_similarity_matrices
+//   input:
+//   tuple variant_set, four_mN, file(similarity_matrix) from ch_similarity_matrices
 
-  output:
-  tuple variant_set, four_mN, file("*_distance_matrix.txt") into (ch_distance_matrices_for_knn, ch_distance_matrices_for_mds)
+//   output:
+//   tuple variant_set, four_mN, file("*_distance_matrix.txt") into (ch_distance_matrices_for_knn, ch_distance_matrices_for_mds)
 
-  script:
-  """
-  ${baseDir}/similarity_to_distance.py ${variant_set} ${similarity_matrix}
-  """
-}
+//   script:
+//   """
+//   ${baseDir}/similarity_to_distance.py ${variant_set} ${similarity_matrix}
+//   """
+// }
 
-process do_MDS {
-  tag "n${params.n_ind_per_pop}_m${params.four_mN}_l${chrom_tag}"
-  publishDir "${baseDir}/../plots/n${params.n_ind_per_pop}/${chrom_tag}/MDS/", mode: 'copy'
-  memory '8GB'
-  cpus 1
-  executor 'local'
+// process do_MDS {
+//   tag "n${params.n_ind_per_pop}_m${params.four_mN}_l${chrom_tag}"
+//   publishDir "${baseDir}/../plots/n${params.n_ind_per_pop}/${chrom_tag}/MDS/", mode: 'copy'
+//   memory '8GB'
+//   cpus 1
+//   executor 'local'
   
-  input:
-  path(distance_matrices) from ch_distance_matrices_for_mds.map{ it [1] }.collect()
+//   input:
+//   path(distance_matrices) from ch_distance_matrices_for_mds.map{ it [1] }.collect()
 
-  output:
-  path('*pdf')
+//   output:
+//   path('*pdf')
 
-  script:
-  """
-  ${baseDir}/distance_to_MDS_plot.py ${params.four_mN} ${params.n_ind_per_pop} ${distance_matrices}
-  """
-}
+//   script:
+//   """
+//   ${baseDir}/distance_to_MDS_plot.py ${params.four_mN} ${params.n_ind_per_pop} ${distance_matrices}
+//   """
+// }
 
-process do_KNN {
-  tag "${variant_set} n${params.n_ind_per_pop}_m${four_mN}_${snp_set}_l${chrom_tag}"
-  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/KNN_classification", mode: 'copy'
-  memory '8GB'
-//  time '10m'
-  executor 'local'
+// process do_KNN {
+//   tag "${variant_set} n${params.n_ind_per_pop}_m${four_mN}_${snp_set}_l${chrom_tag}"
+//   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/KNN_classification", mode: 'copy'
+//   memory '8GB'
+// //  time '10m'
+//   executor 'local'
 
   
-  input:
-  tuple variant_set, four_mN, path(distance_matrices) from ch_distance_matrices_for_knn
+//   input:
+//   tuple variant_set, four_mN, path(distance_matrices) from ch_distance_matrices_for_knn
 
-  output:
-  path ('KNN*.txt') 
-  path ('') into ch_dummy_plotting_delay // Output goes into a dummy channel that is only used to delay the plotting of all the KNN results across all four_mN runs thus far.
+//   output:
+//   path ('KNN*.txt') 
+//   path ('') into ch_dummy_plotting_delay // Output goes into a dummy channel that is only used to delay the plotting of all the KNN results across all four_mN runs thus far.
 
-  script:
-  """
-  ${baseDir}/distance_to_KNN.py ${four_mN} ${params.n_ind_per_pop} ${variant_set} ${params.knn} ${distance_matrices}
-  """
-}
+//   script:
+//   """
+//   ${baseDir}/distance_to_KNN.py ${four_mN} ${params.n_ind_per_pop} ${variant_set} ${params.knn} ${distance_matrices}
+//   """
+// }
 
-/* Create a channel that picks up all KNN results from the same chrom_length regardless of four_mN value. 
-  In that channel, mix the dummy delay channel and fiter for unique files to avoid any duplications. */
-ch_for_knn_plotting=ch_dummy_plotting_delay
-          .mix(Channel.fromPath("${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/*/KNN_classification/KNN_K${params.knn}*.txt"))
-          .unique()
-/*          .dump(tag:"for KNN Plot")*/
+// /* Create a channel that picks up all KNN results from the same chrom_length regardless of four_mN value. 
+//   In that channel, mix the dummy delay channel and fiter for unique files to avoid any duplications. */
+// ch_for_knn_plotting=ch_dummy_plotting_delay
+//           .mix(Channel.fromPath("${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/*/KNN_classification/KNN_K${params.knn}*.txt"))
+//           .unique()
+// /*          .dump(tag:"for KNN Plot")*/
 
-process plot_KNN {
-  tag "n${params.n_ind_per_pop} l${chrom_tag}"
-  publishDir "${baseDir}/../plots/n${params.n_ind_per_pop}/${chrom_tag}/KNN_classification/", mode: 'copy'
-  memory '8GB'
-//  time '10m'
-  executor 'local'
+// process plot_KNN {
+//   tag "n${params.n_ind_per_pop} l${chrom_tag}"
+//   publishDir "${baseDir}/../plots/n${params.n_ind_per_pop}/${chrom_tag}/KNN_classification/", mode: 'copy'
+//   memory '8GB'
+// //  time '10m'
+//   executor 'local'
 
 
-  input:
-  path(knn_files) from ch_for_knn_plotting.collect()
+//   input:
+//   path(knn_files) from ch_for_knn_plotting.collect()
 
-  output:
-  path('KNN_summary_plot*pdf')
+//   output:
+//   path('KNN_summary_plot*pdf')
 
-  script:
-  """
-  ${baseDir}/plot_KNN.py ${chrom_tag} ${params.n_ind_per_pop} ${knn_files}
-  """
-}
+//   script:
+//   """
+//   ${baseDir}/plot_KNN.py ${chrom_tag} ${params.n_ind_per_pop} ${knn_files}
+//   """
+// }
 
