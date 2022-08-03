@@ -120,7 +120,7 @@ process xerxes_pairwise_ras {
   // file "pairwise_blockTableFile_${variant_set}_m${minAF}_M${maxAF}.txt"
 
   script:
-  def freq_cutoffs = variant_set == "rare_vars" ? "--minAC ${minAF} --maxAC ${maxAF}" : variant_set == "all_vars" ? "--minAF ${minAF} --maxAF ${maxAF}" : "--noMinFreq --noMaxFreq"
+  def freq_cutoffs = variant_set == "rare_vars" ? "--minAC ${minAF} --maxAC ${maxAF}" : variant_set == "all_vars" ? "--minFreq ${minAF} --maxFreq ${maxAF}" : "--noMinFreq --noMaxFreq"
   """
   ## Create population definitions file. Each pop consists of all but the last individual. The first individual of a pop is used as a left pop.
   echo "groupDefs:" >pairwise_popConfigFile_${variant_set}.txt
@@ -173,7 +173,7 @@ process xerxes_ras {
   file "rasta_table_${variant_set}_m${minAF}_M${maxAF}.out"
 
   script:
-  def freq_cutoffs = variant_set == "rare_vars" ? "--minAC ${minAF} --maxAC ${maxAF}" : variant_set == "all_vars" ? "--minAF ${minAF} --maxAF ${maxAF}" : "--noMinFreq --noMaxFreq"
+  def freq_cutoffs = variant_set == "rare_vars" ? "--minAC ${minAF} --maxAC ${maxAF}" : variant_set == "all_vars" ? "--minFreq ${minAF} --maxFreq ${maxAF}" : "--noMinFreq --noMaxFreq"
   """
   ## Create population definitions file. Each pop consists of all but the last individual. The first two individuals of a pop is used as a left pop.
   echo "groupDefs:" >popConfigFile_${variant_set}.txt
