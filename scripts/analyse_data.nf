@@ -152,7 +152,6 @@ process xerxes_pairwise_ras {
     --popConfigFile pairwise_popConfigFile_${variant_set}.txt \
     ${freq_cutoffs} \
     -j CHR \
-    ## --blockTableFile pairwise_blockTableFile_${variant_set}_m${minAF}_M${maxAF}.txt \
     > pairwise_ras_table_${variant_set}_m${minAF}_M${maxAF}.out
   """
 }
@@ -206,7 +205,6 @@ process xerxes_ras {
     --popConfigFile popConfigFile_${variant_set}.txt \
     ${freq_cutoffs} \
     -j CHR \
-    ## --blockTableFile blockTableFile_${variant_set}.txt \
     --f4TableOutFile rasta_table_${variant_set}_m${minAF}_M${maxAF}.out \
     > ras_table_${variant_set}_m${minAF}_M${maxAF}.out
   """
