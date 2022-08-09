@@ -84,7 +84,7 @@ ch_input_datasets.all
         [ variant_set, four_mN, package_dir, bed, bim, fam , minAF, maxAF] //Dummy AF values for common vars.
       }
       )
-      .into { ch_input_for_xerxes_ras; ch_input_xerxes_pairwise_ras; ch_for_combining; ch_input_for_AF_cutoffs}
+      .into { ch_input_for_xerxes_ras; ch_xerxes_pairwise_ras_prep; ch_for_combining; ch_input_for_AF_cutoffs}
       // .branch{
       //   rare: it[0] == "rare_vars"
       //   common: true
@@ -105,58 +105,70 @@ ch_for_combining
   .combine(ch_individuals) 
   .into{ ch_input_for_xerxes_f3; ch_input_for_xerxes_f4; }
 
-// process xerxes_pairwise_ras {
-//   tag "${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}_m${minAF}_M${maxAF}"
-//   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_ras", mode: 'copy'
-//   memory '64GB'
-//   cpus 1
-// //  executor 'local'
+// Only run pairwise ras for the run with all the individuals. the distance matrix can then be subset for MDS.
+if ( params.n_ind_per_pop == params.total_inds_per_pop ) {
+  ch_input_xerxes_pairwise_ras = ch_xerxes_pairwise_ras_prep
+                      .map{
+                        variant_set, four_mN, package_dir, bed, bim, fam , minAF, maxAF ->
+                        [ variant_set, four_mN, package_dir, bed, bim, fam ]
+                      }
+                      .unique()
+                      .dump(tag:"pairwise_input")
+} else {
+  ch_input_xerxes_pairwise_ras = Channel.empty()
+}
 
-//   input:
-//   tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam), val(minAF), val(maxAF) from ch_input_xerxes_pairwise_ras
-//   // tuple val(variant_set), val(four_mN), val(n_ind_per_pop), val(package_dir), path(bed), path(bim), path(fam) from ch_input_xerxes_pairwise_ras
+process xerxes_pairwise_ras {
+  tag "${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_ras", mode: 'copy'
+  memory '192GB'
+  cpus 1
+//  executor 'local'
 
-//   output:
-//   tuple variant_set, four_mN, path("pairwise_ras_table_${variant_set}_m${minAF}_M${maxAF}.out") into (ch_xerxes_pairwise_ras_output_for_matrix)
-//   file "pairwise_popConfigFile_${variant_set}.txt"
-//   // file "pairwise_blockTableFile_${variant_set}_m${minAF}_M${maxAF}.txt"
+  input:
+  tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam) from ch_input_xerxes_pairwise_ras
+  // tuple val(variant_set), val(four_mN), val(n_ind_per_pop), val(package_dir), path(bed), path(bim), path(fam) from ch_input_xerxes_pairwise_ras
 
-//   script:
-//   def freq_cutoffs = variant_set == "rare_vars" ? "--minAC ${minAF} --maxAC ${maxAF}" : minAF == 0.0 && maxAF == 1.0 ? "--noMinFreq --noMaxFreq" : "--minFreq ${minAF} --maxFreq ${maxAF}" 
-//   """
-//   ## Create population definitions file. Each pop consists of all but the last individual. The first individual of a pop is used as a left pop.
-//   echo "groupDefs:" >pairwise_popConfigFile_${variant_set}.txt
-//   leftpops=()
-//   rightpops=()
-//   n_inds=\$((${params.n_ind_per_pop} * 9 - 1))
+  output:
+  tuple variant_set, four_mN, path("pairwise_ras_table_${variant_set}.out") into (ch_xerxes_pairwise_ras_output_for_matrix_prep)
+  file "pairwise_popConfigFile_${variant_set}.txt"
+  // file "pairwise_blockTableFile_${variant_set}.txt"
 
-//   ## Define rights and lefts
-//   echo "popLefts:" >>pairwise_popConfigFile_${variant_set}.txt
-//   for p in \$(seq 0 1 8); do
-//     idx=\$(( \${p} * ${params.total_inds_per_pop}))
-//     for j in \$(seq \${idx} 1 \$(( \${idx}+${params.n_ind_per_pop}-1)) ); do
-//       echo "  - <ind\${j}>" >>pairwise_popConfigFile_${variant_set}.txt
-//     done
-//   done
+  script:
+  """
+  ## Create population definitions file. Each pop consists of all but the last individual. The first individual of a pop is used as a left pop.
+  echo "groupDefs:" >pairwise_popConfigFile_${variant_set}.txt
+  leftpops=()
+  rightpops=()
+  n_inds=\$((${params.n_ind_per_pop} * 9 - 1))
 
-//   echo "popRights:" >>pairwise_popConfigFile_${variant_set}.txt
-//   for p in \$(seq 0 1 8); do
-//     idx=\$(( \${p} * ${params.total_inds_per_pop}))
-//     for j in \$(seq \${idx} 1 \$(( \${idx}+${params.n_ind_per_pop}-1)) ); do
-//       echo "  - <ind\${j}>" >>pairwise_popConfigFile_${variant_set}.txt
-//     done
-//   done
+  ## Define rights and lefts
+  echo "popLefts:" >>pairwise_popConfigFile_${variant_set}.txt
+  for p in \$(seq 0 1 8); do
+    idx=\$(( \${p} * ${params.total_inds_per_pop}))
+    for j in \$(seq \${idx} 1 \$(( \${idx}+${params.n_ind_per_pop}-1)) ); do
+      echo "  - <ind\${j}>" >>pairwise_popConfigFile_${variant_set}.txt
+    done
+  done
 
-//   echo "outgroup: <Ref>" >>pairwise_popConfigFile_${variant_set}.txt
+  echo "popRights:" >>pairwise_popConfigFile_${variant_set}.txt
+  for p in \$(seq 0 1 8); do
+    idx=\$(( \${p} * ${params.total_inds_per_pop}))
+    for j in \$(seq \${idx} 1 \$(( \${idx}+${params.n_ind_per_pop}-1)) ); do
+      echo "  - <ind\${j}>" >>pairwise_popConfigFile_${variant_set}.txt
+    done
+  done
 
-//   ## Run ras
-//   ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir}/ \
-//     --popConfigFile pairwise_popConfigFile_${variant_set}.txt \
-//     ${freq_cutoffs} \
-//     -j CHR \
-//     > pairwise_ras_table_${variant_set}_m${minAF}_M${maxAF}.out
-//   """
-// }
+  echo "outgroup: <Ref>" >>pairwise_popConfigFile_${variant_set}.txt
+
+  ## Run ras
+  ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir}/ \
+    --popConfigFile pairwise_popConfigFile_${variant_set}.txt \
+    --noMinFreq --noMaxFreq \
+    -j CHR \
+    > pairwise_ras_table_${variant_set}.out
+  """
+}
 
 process xerxes_ras {
   tag "${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}_m${minAF}_M${maxAF}"
