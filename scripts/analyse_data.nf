@@ -101,6 +101,16 @@ ch_individuals = Channel.from( 0..8 )
                               actual_ind
                           }
 
+// Create a channel of groups of individuals. 100 inds per group. Used to run pairwise ras in chunks for smaller memory footprint.
+ch_ras_individuals = Channel.from( 0..<9*params.total_inds_per_pop )
+                    .map{
+                      def ind = "ind"+it
+                      def iter = it.intdiv(100)
+                      
+                      [ind, iter]
+                    }
+                    .groupTuple(by:1)
+
 ch_for_combining
   .combine(ch_individuals) 
   .into{ ch_input_for_xerxes_f3; ch_input_for_xerxes_f4; }
@@ -113,60 +123,59 @@ if ( params.n_ind_per_pop == params.total_inds_per_pop ) {
                         [ variant_set, four_mN, package_dir, bed, bim, fam ]
                       }
                       .unique()
+                      .combine(ch_ras_individuals)
                       .dump(tag:"pairwise_input")
 } else {
   ch_input_xerxes_pairwise_ras = Channel.empty()
 }
 
 process xerxes_pairwise_ras {
-  tag "${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}"
-  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_ras", mode: 'copy'
-  memory '192GB'
+  tag "${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}_batch${iter}"
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_ras/pairwise", mode: 'copy'
+  memory '48GB'
   cpus 1
 //  executor 'local'
 
   input:
-  tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam) from ch_input_xerxes_pairwise_ras
+  tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam), left_inds, val(iter) from ch_input_xerxes_pairwise_ras
   // tuple val(variant_set), val(four_mN), val(n_ind_per_pop), val(package_dir), path(bed), path(bim), path(fam) from ch_input_xerxes_pairwise_ras
 
   output:
-  tuple variant_set, four_mN, path("pairwise_ras_table_${variant_set}.out") into (ch_xerxes_pairwise_ras_output_for_matrix_prep)
-  file "pairwise_popConfigFile_${variant_set}.txt"
+  tuple variant_set, four_mN, path("pairwise_ras_table_${variant_set}_batch${iter}.out") into (ch_xerxes_pairwise_ras_output_for_matrix_prep)
+  file "pairwise_popConfigFile_${variant_set}_batch${iter}.txt"
   // file "pairwise_blockTableFile_${variant_set}.txt"
 
   script:
+  def left_pops = left_inds.flatten().join(" ")
   """
   ## Create population definitions file. Each pop consists of all but the last individual. The first individual of a pop is used as a left pop.
-  echo "groupDefs:" >pairwise_popConfigFile_${variant_set}.txt
+  echo "groupDefs:" >pairwise_popConfigFile_${variant_set}_batch${iter}.txt
   leftpops=()
   rightpops=()
   n_inds=\$((${params.n_ind_per_pop} * 9 - 1))
 
   ## Define rights and lefts
-  echo "popLefts:" >>pairwise_popConfigFile_${variant_set}.txt
+  echo "popLefts:" >>pairwise_popConfigFile_${variant_set}_batch${iter}.txt
+  for ind in ${left_pops}; do
+    echo "  - <\${ind}>"  >>pairwise_popConfigFile_${variant_set}_batch${iter}.txt
+  done
+
+  echo "popRights:" >>pairwise_popConfigFile_${variant_set}_batch${iter}.txt
   for p in \$(seq 0 1 8); do
     idx=\$(( \${p} * ${params.total_inds_per_pop}))
     for j in \$(seq \${idx} 1 \$(( \${idx}+${params.n_ind_per_pop}-1)) ); do
-      echo "  - <ind\${j}>" >>pairwise_popConfigFile_${variant_set}.txt
+      echo "  - <ind\${j}>" >>pairwise_popConfigFile_${variant_set}_batch${iter}.txt
     done
   done
 
-  echo "popRights:" >>pairwise_popConfigFile_${variant_set}.txt
-  for p in \$(seq 0 1 8); do
-    idx=\$(( \${p} * ${params.total_inds_per_pop}))
-    for j in \$(seq \${idx} 1 \$(( \${idx}+${params.n_ind_per_pop}-1)) ); do
-      echo "  - <ind\${j}>" >>pairwise_popConfigFile_${variant_set}.txt
-    done
-  done
-
-  echo "outgroup: <Ref>" >>pairwise_popConfigFile_${variant_set}.txt
+  echo "outgroup: <Ref>" >>pairwise_popConfigFile_${variant_set}_batch${iter}.txt
 
   ## Run ras
   ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir}/ \
-    --popConfigFile pairwise_popConfigFile_${variant_set}.txt \
+    --popConfigFile pairwise_popConfigFile_${variant_set}_batch${iter}.txt \
     --noMinFreq --noMaxFreq \
     -j CHR \
-    > pairwise_ras_table_${variant_set}.out
+    > pairwise_ras_table_${variant_set}_batch${iter}.out
   """
 }
 
