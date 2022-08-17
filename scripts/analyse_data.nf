@@ -78,8 +78,8 @@ ch_af_cutoffs = Channel.from( [0.01, 0.02, 0.05, 0.10, 0.15, 0.2, 0.3, 0.4, 0.5,
 
 ch_input_datasets.other.map{
     variant_set, four_mN, package_dir, bed, bim, fam ->
-    def minAF = variant_set == "rare_vars" ? 2 : 0.05
-    def maxAF = variant_set == "rare_vars" ? params.max_ras_ac : 0.95
+    def minAF = variant_set == "rare_vars" ? 2 / (params.n_ind_per_pop * 9) : 0.05
+    def maxAF = variant_set == "rare_vars" ? params.max_ras_ac  / (params.n_ind_per_pop * 9) : 0.95
     [ variant_set, four_mN, package_dir, bed, bim, fam , minAF, maxAF ]
   }
   .into{ ch_non_all_vars_for_pairwise_ras_prep; ch_non_all_vars_for_ras_prep }
@@ -92,12 +92,12 @@ ch_all_vars_for_pairwise_ras_prep
   .filter( {it[6] == 0.0 && it[7] == 1.0} )
   .mix( ch_non_all_vars_for_pairwise_ras_prep )
   .dump(tag:"input_pairwise_ras")
-  .into{ ch_input_xerxes_pairwise_ras }
+  .set{ ch_input_xerxes_pairwise_ras }
 
 // Mix all and non-all vars with many AF bins
 ch_all_vars_for_ras_prep.mix( ch_non_all_vars_for_ras_prep )
   .dump(tag:"input_ras")
-  .into { ch_input_for_xerxes_ras }
+  .set { ch_input_for_xerxes_ras }
 
 // // This might be overkill, but split f3/f4 runs to only run statistics with 1 individual at position A. Then merge all logfiles together later
 // // First create a channel of the individuals in this (potentially subsampled) dataset.
@@ -130,36 +130,45 @@ process xerxes_pairwise_ras {
   // file "pairwise_blockTableFile_${variant_set}_m${minAF}_M${maxAF}.txt"
 
   script:
-  def freq_cutoffs = variant_set == "rare_vars" ? "--minAC ${minAF} --maxAC ${maxAF}" : minAF == 0.0 && maxAF == 1.0 ? "--noMinFreq --noMaxFreq" : "--minFreq ${minAF} --maxFreq ${maxAF}"
   def partial_run = variant_set == "twelve_forty_vars" ? "--maxSnps 12000000" : ''
   def inds_to_run = params.n_ind_per_pop <= 20 ? params.n_ind_per_pop : 20 // Use 20 individuals per population for pairwise matrix. if fewer than 10 are there, use all.
   """
-  ## Create popConfigFile. Each pop consists of all but the first two individuals. Pairwise matrix only calculated for 20 individuals
+  poplist=''
+  matrix_inds=''
+  ## Infer matrix inds and ascertainment lists
+  for p in \$(seq 0 1 8); do
+    idx=\$(( \${p} * ${params.total_inds_per_pop}))
+    for j in \$(seq \${idx} 1 \$(( \${idx} + ${inds_to_run} -1)) ); do
+      matrix_inds+="\\\"<ind\${j}>\\\", " >>pairwise_popConfigFile_${variant_set}.txt
+    done
+    poplist+="\\\"Pop\${p}\\\", "
+  done
+
+  ## Create popConfigFile. Each pop consists of all but the first two individuals. Pairwise matrix only calculated for 20 individuals.
+  ## Ascertainment of AF should happen across all individuals, not just the right pops
   echo "groupDefs:" >pairwise_popConfigFile_${variant_set}.txt
+  echo -n "  ascertainIn: [" >>pairwise_popConfigFile_${variant_set}.txt
+  echo -n "\${poplist%, }" >>pairwise_popConfigFile_${variant_set}.txt
+  echo "]" >>pairwise_popConfigFile_${variant_set}.txt
 
-  ## Define rights and lefts
-  echo "popLefts:" >>pairwise_popConfigFile_${variant_set}.txt
-  for p in \$(seq 0 1 8); do
-    idx=\$(( \${p} * ${params.total_inds_per_pop}))
-    for j in \$(seq \${idx} 1 \$(( \${idx} + ${inds_to_run} -1)) ); do
-      echo "  - <ind\${j}>" >>pairwise_popConfigFile_${variant_set}.txt
-    done
-  done
-
-  echo "popRights:" >>pairwise_popConfigFile_${variant_set}.txt
-  for p in \$(seq 0 1 8); do
-    idx=\$(( \${p} * ${params.total_inds_per_pop}))
-    for j in \$(seq \${idx} 1 \$(( \${idx} + ${inds_to_run} -1)) ); do
-      echo "  - <ind\${j}>" >>pairwise_popConfigFile_${variant_set}.txt
-    done
-  done
-
-  echo "outgroup: <Ref>" >>pairwise_popConfigFile_${variant_set}.txt
+  echo "fstats:" >>pairwise_popConfigFile_${variant_set}.txt
+  echo "- type: F3" >>pairwise_popConfigFile_${variant_set}.txt
+  echo -n "  a: [" >>pairwise_popConfigFile_${variant_set}.txt
+  echo -n "\${matrix_inds%, }" >>pairwise_popConfigFile_${variant_set}.txt
+  echo "]" >>pairwise_popConfigFile_${variant_set}.txt
+  echo -n "  b: [" >>pairwise_popConfigFile_${variant_set}.txt
+  echo -n "\${matrix_inds%, }" >>pairwise_popConfigFile_${variant_set}.txt
+  echo "]" >>pairwise_popConfigFile_${variant_set}.txt
+  echo '  c: ["Ref"]' >>pairwise_popConfigFile_${variant_set}.txt
+  echo "  ascertainment:" >>pairwise_popConfigFile_${variant_set}.txt
+  echo '    outgroup: "Ref"' >>pairwise_popConfigFile_${variant_set}.txt
+  echo '    reference: "ascertainIn"' >>pairwise_popConfigFile_${variant_set}.txt
+  echo "    lower: ${minAF}" >>pairwise_popConfigFile_${variant_set}.txt
+  echo "    upper: ${maxAF}" >>pairwise_popConfigFile_${variant_set}.txt
 
   ## Run ras
-  ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir}/ \
-    --popConfigFile pairwise_popConfigFile_${variant_set}.txt \
-    ${freq_cutoffs} \
+  ${params.poseidon_exec_dir}/xerxes fstats -d ${package_dir}/ \
+    --statConfig pairwise_popConfigFile_${variant_set}.txt \
     ${partial_run} \
     -j CHR \
     > pairwise_ras_table_${variant_set}_m${minAF}_M${maxAF}.out
@@ -182,9 +191,8 @@ process xerxes_ras {
   file "rasta_table_${variant_set}_m${minAF}_M${maxAF}.out"
 
   script:
-  def freq_cutoffs = variant_set == "rare_vars" ? "--minAC ${minAF} --maxAC ${maxAF}" : minAF == 0.0 && maxAF == 1.0 ? "--noMinFreq --noMaxFreq" : "--minFreq ${minAF} --maxFreq ${maxAF}" 
+  def freq_cutoffs = minAF == 0.0 && maxAF == 1.0 ? "--noMinFreq --noMaxFreq" : "--minFreq ${minAF} --maxFreq ${maxAF}"
   def partial_run = variant_set == "twelve_forty_vars" ? "--maxSnps 12000000" : ''
-
   """
   ## Create population definitions file. Each pop consists of all but the first two individuals. The first two individuals of a pop is used as a left pop.
   echo "groupDefs:" >popConfigFile_${variant_set}.txt
