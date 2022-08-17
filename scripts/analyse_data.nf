@@ -54,7 +54,8 @@ ch_input_datasets = Channel.fromList(["all_vars", "common_vars", "twelve_forty_v
       // .combine(Channel.fromList( [10, 20, 50, 100, 200, 500] ))
       .map{
         def variant_set = it[0]
-        def pkg_name = variant_set == "rare_vars" ? "all_vars" : variant_set
+        def pkg_name = "all_vars" // Use 'all_vars' package for all runs, and rely on xerxes to do the allele frequency ascertainment in each case
+        // def pkg_name = variant_set == "rare_vars" ? "all_vars" : variant_set
         def four_mN = it[1]
         // def n_ind_per_pop = it[2]
         def package_dir = "${baseDir}/../data/n${params.n_ind_per_pop}/${chrom_tag}/"+it[1]+"/poseidon/"+pkg_name
@@ -75,88 +76,95 @@ ch_input_datasets = Channel.fromList(["all_vars", "common_vars", "twelve_forty_v
 ch_af_cutoffs = Channel.from( [0.01, 0.02, 0.05, 0.10, 0.15, 0.2, 0.3, 0.4, 0.5, 0.8, 0.0] )
           .merge(Channel.from( [0.02, 0.05, 0.10, 0.15, 0.2 , 0.3, 0.4, 0.5, 0.8, 1.0, 1.0]))
 
-ch_input_datasets.all
-      .combine(ch_af_cutoffs)
-      .mix(ch_input_datasets.other.map{
-        variant_set, four_mN, package_dir, bed, bim, fam ->
-        def minAF = variant_set == "rare_vars" ? 2 : 0.0
-        def maxAF = variant_set == "rare_vars" ? params.max_ras_ac : 1.0
-        [ variant_set, four_mN, package_dir, bed, bim, fam , minAF, maxAF] //Dummy AF values for common vars.
-      }
-      )
-      .into { ch_input_for_xerxes_ras; ch_input_xerxes_pairwise_ras; ch_for_combining; ch_input_for_AF_cutoffs}
-      // .branch{
-      //   rare: it[0] == "rare_vars"
-      //   common: true
-      // }
+ch_input_datasets.other.map{
+    variant_set, four_mN, package_dir, bed, bim, fam ->
+    def minAF = variant_set == "rare_vars" ? 2 : 0.05
+    def maxAF = variant_set == "rare_vars" ? params.max_ras_ac : 0.95
+    [ variant_set, four_mN, package_dir, bed, bim, fam , minAF, maxAF ]
+  }
+  .into{ ch_non_all_vars_for_pairwise_ras_prep; ch_non_all_vars_for_ras_prep }
 
+ch_input_datasets.all.combine(ch_af_cutoffs)
+      .into{ch_all_vars_for_pairwise_ras_prep; ch_all_vars_for_ras_prep}
 
-// This might be overkill, but split f3/f4 runs to only run statistics with 1 individual at position A. Then merge all logfiles together later
-// First create a channel of the individuals in this (potentially subsampled) dataset.
-ch_individuals = Channel.from( 0..8 )
-                      .combine(Channel.from( 0..<params.n_ind_per_pop )) //< means the actual value of params.n_ind_per_pop is not in the range.
-                      .map{
-                              first_ind = it[0] * params.total_inds_per_pop
-                              actual_ind= it[1] + first_ind
-                              actual_ind
-                          }
+// Mix all and non-all vars with just 0-1 AF bin for all_vars
+ch_all_vars_for_pairwise_ras_prep
+  .filter( {it[6] == 0.0 && it[7] == 1.0} )
+  .mix( ch_non_all_vars_for_pairwise_ras_prep )
+  .dump(tag:"input_pairwise_ras")
+  .into{ ch_input_xerxes_pairwise_ras }
 
-ch_for_combining
-  .combine(ch_individuals) 
-  .into{ ch_input_for_xerxes_f3; ch_input_for_xerxes_f4; }
+// Mix all and non-all vars with many AF bins
+ch_all_vars_for_ras_prep.mix( ch_non_all_vars_for_ras_prep )
+  .dump(tag:"input_ras")
+  .into { ch_input_for_xerxes_ras }
 
-// process xerxes_pairwise_ras {
-//   tag "${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}_m${minAF}_M${maxAF}"
-//   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_ras", mode: 'copy'
-//   memory '64GB'
-//   cpus 1
-// //  executor 'local'
+// // This might be overkill, but split f3/f4 runs to only run statistics with 1 individual at position A. Then merge all logfiles together later
+// // First create a channel of the individuals in this (potentially subsampled) dataset.
+// ch_individuals = Channel.from( 0..8 )
+//                       .combine(Channel.from( 0..<params.n_ind_per_pop )) //< means the actual value of params.n_ind_per_pop is not in the range.
+//                       .map{
+//                               first_ind = it[0] * params.total_inds_per_pop
+//                               actual_ind= it[1] + first_ind
+//                               actual_ind
+//                           }
 
-//   input:
-//   tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam), val(minAF), val(maxAF) from ch_input_xerxes_pairwise_ras
-//   // tuple val(variant_set), val(four_mN), val(n_ind_per_pop), val(package_dir), path(bed), path(bim), path(fam) from ch_input_xerxes_pairwise_ras
+// ch_for_combining
+//   .combine(ch_individuals) 
+//   .into{ ch_input_for_xerxes_f3; ch_input_for_xerxes_f4; }
 
-//   output:
-//   tuple variant_set, four_mN, path("pairwise_ras_table_${variant_set}_m${minAF}_M${maxAF}.out") into (ch_xerxes_pairwise_ras_output_for_matrix)
-//   file "pairwise_popConfigFile_${variant_set}.txt"
-//   // file "pairwise_blockTableFile_${variant_set}_m${minAF}_M${maxAF}.txt"
+process xerxes_pairwise_ras {
+  tag "${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}_m${minAF}_M${maxAF}"
+  publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_ras", mode: 'copy'
+  memory '64GB'
+  cpus 1
+//  executor 'local'
 
-//   script:
-//   def freq_cutoffs = variant_set == "rare_vars" ? "--minAC ${minAF} --maxAC ${maxAF}" : minAF == 0.0 && maxAF == 1.0 ? "--noMinFreq --noMaxFreq" : "--minFreq ${minAF} --maxFreq ${maxAF}" 
-//   """
-//   ## Create population definitions file. Each pop consists of all but the last individual. The first individual of a pop is used as a left pop.
-//   echo "groupDefs:" >pairwise_popConfigFile_${variant_set}.txt
-//   leftpops=()
-//   rightpops=()
-//   n_inds=\$((${params.n_ind_per_pop} * 9 - 1))
+  input:
+  tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam), val(minAF), val(maxAF) from ch_input_xerxes_pairwise_ras
+  // tuple val(variant_set), val(four_mN), val(n_ind_per_pop), val(package_dir), path(bed), path(bim), path(fam) from ch_input_xerxes_pairwise_ras
 
-//   ## Define rights and lefts
-//   echo "popLefts:" >>pairwise_popConfigFile_${variant_set}.txt
-//   for p in \$(seq 0 1 8); do
-//     idx=\$(( \${p} * ${params.total_inds_per_pop}))
-//     for j in \$(seq \${idx} 1 \$(( \${idx}+${params.n_ind_per_pop}-1)) ); do
-//       echo "  - <ind\${j}>" >>pairwise_popConfigFile_${variant_set}.txt
-//     done
-//   done
+  output:
+  tuple variant_set, four_mN, path("pairwise_ras_table_${variant_set}_m${minAF}_M${maxAF}.out") into (ch_xerxes_pairwise_ras_output_for_matrix)
+  file "pairwise_popConfigFile_${variant_set}.txt"
+  // file "pairwise_blockTableFile_${variant_set}_m${minAF}_M${maxAF}.txt"
 
-//   echo "popRights:" >>pairwise_popConfigFile_${variant_set}.txt
-//   for p in \$(seq 0 1 8); do
-//     idx=\$(( \${p} * ${params.total_inds_per_pop}))
-//     for j in \$(seq \${idx} 1 \$(( \${idx}+${params.n_ind_per_pop}-1)) ); do
-//       echo "  - <ind\${j}>" >>pairwise_popConfigFile_${variant_set}.txt
-//     done
-//   done
+  script:
+  def freq_cutoffs = variant_set == "rare_vars" ? "--minAC ${minAF} --maxAC ${maxAF}" : minAF == 0.0 && maxAF == 1.0 ? "--noMinFreq --noMaxFreq" : "--minFreq ${minAF} --maxFreq ${maxAF}"
+  def partial_run = variant_set == "twelve_forty_vars" ? "--maxSnps 12000000" : ''
+  def inds_to_run = params.n_ind_per_pop <= 20 ? params.n_ind_per_pop : 20 // Use 20 individuals per population for pairwise matrix. if fewer than 10 are there, use all.
+  """
+  ## Create popConfigFile. Each pop consists of all but the first two individuals. Pairwise matrix only calculated for 20 individuals
+  echo "groupDefs:" >pairwise_popConfigFile_${variant_set}.txt
 
-//   echo "outgroup: <Ref>" >>pairwise_popConfigFile_${variant_set}.txt
+  ## Define rights and lefts
+  echo "popLefts:" >>pairwise_popConfigFile_${variant_set}.txt
+  for p in \$(seq 0 1 8); do
+    idx=\$(( \${p} * ${params.total_inds_per_pop}))
+    for j in \$(seq \${idx} 1 \$(( \${idx} + ${inds_to_run} -1)) ); do
+      echo "  - <ind\${j}>" >>pairwise_popConfigFile_${variant_set}.txt
+    done
+  done
 
-//   ## Run ras
-//   ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir}/ \
-//     --popConfigFile pairwise_popConfigFile_${variant_set}.txt \
-//     ${freq_cutoffs} \
-//     -j CHR \
-//     > pairwise_ras_table_${variant_set}_m${minAF}_M${maxAF}.out
-//   """
-// }
+  echo "popRights:" >>pairwise_popConfigFile_${variant_set}.txt
+  for p in \$(seq 0 1 8); do
+    idx=\$(( \${p} * ${params.total_inds_per_pop}))
+    for j in \$(seq \${idx} 1 \$(( \${idx} + ${inds_to_run} -1)) ); do
+      echo "  - <ind\${j}>" >>pairwise_popConfigFile_${variant_set}.txt
+    done
+  done
+
+  echo "outgroup: <Ref>" >>pairwise_popConfigFile_${variant_set}.txt
+
+  ## Run ras
+  ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir}/ \
+    --popConfigFile pairwise_popConfigFile_${variant_set}.txt \
+    ${freq_cutoffs} \
+    ${partial_run} \
+    -j CHR \
+    > pairwise_ras_table_${variant_set}_m${minAF}_M${maxAF}.out
+  """
+}
 
 process xerxes_ras {
   tag "${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}_m${minAF}_M${maxAF}"
@@ -175,8 +183,10 @@ process xerxes_ras {
 
   script:
   def freq_cutoffs = variant_set == "rare_vars" ? "--minAC ${minAF} --maxAC ${maxAF}" : minAF == 0.0 && maxAF == 1.0 ? "--noMinFreq --noMaxFreq" : "--minFreq ${minAF} --maxFreq ${maxAF}" 
+  def partial_run = variant_set == "twelve_forty_vars" ? "--maxSnps 12000000" : ''
+
   """
-  ## Create population definitions file. Each pop consists of all but the last individual. The first two individuals of a pop is used as a left pop.
+  ## Create population definitions file. Each pop consists of all but the first two individuals. The first two individuals of a pop is used as a left pop.
   echo "groupDefs:" >popConfigFile_${variant_set}.txt
   leftpops=()
   rightpops=()
@@ -206,6 +216,7 @@ process xerxes_ras {
   ${params.poseidon_exec_dir}/xerxes ras -d ${package_dir}/ \
     --popConfigFile popConfigFile_${variant_set}.txt \
     ${freq_cutoffs} \
+    ${partial_run} \
     -j CHR \
     --f4TableOutFile rasta_table_${variant_set}_m${minAF}_M${maxAF}.out \
     > ras_table_${variant_set}_m${minAF}_M${maxAF}.out
