@@ -91,6 +91,7 @@ ch_input_datasets.all.combine(ch_af_cutoffs)
 ch_all_vars_for_pairwise_ras_prep
   .filter( {it[6] == 0.0 && it[7] == 1.0} )
   .mix( ch_non_all_vars_for_pairwise_ras_prep )
+  .combine(Channel.of(0..8)) //Run each population as a separate set to batch jobs better.
   .dump(tag:"input_pairwise_ras")
   .set{ ch_input_xerxes_pairwise_ras }
 
@@ -114,14 +115,14 @@ ch_all_vars_for_ras_prep.mix( ch_non_all_vars_for_ras_prep )
 //   .into{ ch_input_for_xerxes_f3; ch_input_for_xerxes_f4; }
 
 process xerxes_pairwise_ras {
-  tag "${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}_m${minAF}_M${maxAF}"
+  tag "batch${batch_num}_${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}_m${minAF}_M${maxAF}"
   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_ras", mode: 'copy'
   memory '64GB'
   cpus 1
 //  executor 'local'
 
   input:
-  tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam), val(minAF), val(maxAF) from ch_input_xerxes_pairwise_ras
+  tuple val(variant_set), val(four_mN), val(package_dir), path(bed), path(bim), path(fam), val(minAF), val(maxAF), val(batch_num) from ch_input_xerxes_pairwise_ras
   // tuple val(variant_set), val(four_mN), val(n_ind_per_pop), val(package_dir), path(bed), path(bim), path(fam) from ch_input_xerxes_pairwise_ras
 
   output:
@@ -135,43 +136,47 @@ process xerxes_pairwise_ras {
   """
   poplist=''
   matrix_inds=''
+  test_inds=''
   ## Infer matrix inds and ascertainment lists
   for p in \$(seq 0 1 8); do
     idx=\$(( \${p} * ${params.total_inds_per_pop}))
     for j in \$(seq \${idx} 1 \$(( \${idx} + ${inds_to_run} -1)) ); do
-      matrix_inds+="\\\"<ind\${j}>\\\", " >>pairwise_popConfigFile_${variant_set}.txt
+      matrix_inds+="\\\"<ind\${j}>\\\", "
+      if [[ \${p} == ${batch_num} ]]; then
+        test_inds+="\\\"<ind\${j}>\\\", "
+      fi
     done
     poplist+="\\\"Pop\${p}\\\", "
   done
 
   ## Create popConfigFile. Each pop consists of all but the first two individuals. Pairwise matrix only calculated for 20 individuals.
   ## Ascertainment of AF should happen across all individuals, not just the right pops
-  echo "groupDefs:" >pairwise_popConfigFile_${variant_set}.txt
-  echo -n "  ascertainIn: [" >>pairwise_popConfigFile_${variant_set}.txt
-  echo -n "\${poplist%, }" >>pairwise_popConfigFile_${variant_set}.txt
-  echo "]" >>pairwise_popConfigFile_${variant_set}.txt
+  echo "groupDefs:" >pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo -n "  ascertainIn: [" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo -n "\${poplist%, }" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo "]" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
 
-  echo "fstats:" >>pairwise_popConfigFile_${variant_set}.txt
-  echo "- type: F3" >>pairwise_popConfigFile_${variant_set}.txt
-  echo -n "  a: [" >>pairwise_popConfigFile_${variant_set}.txt
-  echo -n "\${matrix_inds%, }" >>pairwise_popConfigFile_${variant_set}.txt
-  echo "]" >>pairwise_popConfigFile_${variant_set}.txt
-  echo -n "  b: [" >>pairwise_popConfigFile_${variant_set}.txt
-  echo -n "\${matrix_inds%, }" >>pairwise_popConfigFile_${variant_set}.txt
-  echo "]" >>pairwise_popConfigFile_${variant_set}.txt
-  echo '  c: ["Ref"]' >>pairwise_popConfigFile_${variant_set}.txt
-  echo "  ascertainment:" >>pairwise_popConfigFile_${variant_set}.txt
-  echo '    outgroup: "Ref"' >>pairwise_popConfigFile_${variant_set}.txt
-  echo '    reference: "ascertainIn"' >>pairwise_popConfigFile_${variant_set}.txt
-  echo "    lower: ${minAF}" >>pairwise_popConfigFile_${variant_set}.txt
-  echo "    upper: ${maxAF}" >>pairwise_popConfigFile_${variant_set}.txt
+  echo "fstats:" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo "- type: F3" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo -n "  a: [" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo -n "\${test_inds%, }" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo "]" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo -n "  b: [" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo -n "\${matrix_inds%, }" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo "]" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo '  c: ["Ref"]' >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo "  ascertainment:" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo '    outgroup: "Ref"' >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo '    reference: "ascertainIn"' >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo "    lower: ${minAF}" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo "    upper: ${maxAF}" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
 
   ## Run ras
   ${params.poseidon_exec_dir}/xerxes fstats -d ${package_dir}/ \
-    --statConfig pairwise_popConfigFile_${variant_set}.txt \
+    --statConfig pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt \
     ${partial_run} \
     -j CHR \
-    > pairwise_ras_table_${variant_set}_m${minAF}_M${maxAF}.out
+    > pairwise_ras_table_${variant_set}_m${minAF}_M${maxAF}_batch${batch_num}.out
   """
 }
 
