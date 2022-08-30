@@ -92,6 +92,7 @@ ch_all_vars_for_pairwise_ras_prep
   .filter( {it[6] == 0.0 && it[7] == 1.0} )
   .mix( ch_non_all_vars_for_pairwise_ras_prep )
   .combine(Channel.of(0..8)) //Run each population as a separate set to batch jobs better.
+  // .filter({ it [0] != "twelve_forty_vars" }) //Exclude TF since the maxSNPs setup doesnt actually work.
   .dump(tag:"input_pairwise_ras")
   .set{ ch_input_xerxes_pairwise_ras }
 
@@ -117,7 +118,7 @@ ch_all_vars_for_ras_prep.mix( ch_non_all_vars_for_ras_prep )
 process xerxes_pairwise_ras {
   tag "batch${batch_num}_${variant_set}_n${params.n_ind_per_pop}_m${four_mN}_l${chrom_tag}_m${minAF}_M${maxAF}"
   publishDir "${baseDir}/../results/n${params.n_ind_per_pop}/${chrom_tag}/${four_mN}/xerxes_ras", mode: 'copy'
-  memory '64GB'
+  memory '12GB'
   cpus 1
 //  executor 'local'
 
@@ -126,7 +127,7 @@ process xerxes_pairwise_ras {
   // tuple val(variant_set), val(four_mN), val(n_ind_per_pop), val(package_dir), path(bed), path(bim), path(fam) from ch_input_xerxes_pairwise_ras
 
   output:
-  tuple variant_set, four_mN, path("pairwise_ras_table_${variant_set}_m${minAF}_M${maxAF}.out") into (ch_xerxes_pairwise_ras_output_for_matrix)
+  tuple variant_set, four_mN, path("pairwise_ras_table_${variant_set}_m${minAF}_M${maxAF}_batch${batch_num}.out") into (ch_xerxes_pairwise_ras_output_for_merging)
   file "pairwise_popConfigFile_${variant_set}.txt"
   // file "pairwise_blockTableFile_${variant_set}_m${minAF}_M${maxAF}.txt"
 
@@ -157,7 +158,7 @@ process xerxes_pairwise_ras {
   echo "]" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
 
   echo "fstats:" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
-  echo "- type: F3" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
+  echo "- type: F3vanilla" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
   echo -n "  a: [" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
   echo -n "\${test_inds%, }" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
   echo "]" >>pairwise_popConfigFile_${variant_set}_batch${batch_num}.txt
