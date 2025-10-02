@@ -18,6 +18,8 @@ dependencies:
   - conda-forge::r-rlang=0.4.11
   - conda-forge::r-stringr=1.4.0
   - bioconda::admixtools=6.0
+  - bioconda::poseidon-trident=0.26.1
+  - bioconda::poseidon-xerxes
   - pip
   - pip:
     - wcmatch
