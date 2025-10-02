@@ -9,7 +9,7 @@ def helpMessage() {
 
   The typical command for running the pipeline on sdag is as follows:
 
-  nextflow run simulate_data.nf -profile cobra,mpcdf,conda,var_sim --four_mN 1 --chrom_length 1e6 --n_ind_per_pop 20 --max_ras_ac 5 --knn 5
+  nextflow run simulate_data_chained.nf -profile eva,grace,conda,var_sim --four_mN 1 --four_mN2 10 --chrom_length 1e6 --n_ind_per_pop 20
 
   Mandatory arguments:
       -profile [str]          Institution or personal hardware config to use (e.g. standard, docker, singularity, conda, aws). Ask your system admin if unsure, or check documentation.
@@ -47,7 +47,7 @@ println ""
 
 process msprime{
   
-  tag "n${params.n_ind_per_pop}_m${params.four_mN}_m2${params.four_mN2}_m2${params.four_mN2}_chr${chrom_name}_l${params.chrom_length}"
+  tag "n${params.n_ind_per_pop}_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}_l${params.chrom_length}"
   // publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}_${params.four_mN2}", mode: 'copy'
   memory '8GB'
   // executor 'local'
@@ -56,23 +56,23 @@ process msprime{
   val chrom_name from Channel.of(1..20)
   
   output:
-  path("all_vars_m${params.four_mN}_m2${params.four_mN2}_m2${params.four_mN2}_chr${chrom_name}.geno") into ch_all_vars_geno
-  path("all_vars_m${params.four_mN}_m2${params.four_mN2}_chr${chrom_name}.snp") into ch_all_vars_snp
-  path("all_vars_m${params.four_mN}_m2${params.four_mN2}_chr${chrom_name}.ind") into ch_all_vars_ind
-  path("common_vars_m${params.four_mN}_m2${params.four_mN2}_chr${chrom_name}.geno") into (ch_common_vars_geno, ch_common_vars_geno_for_1240k )
-  path("common_vars_m${params.four_mN}_m2${params.four_mN2}_chr${chrom_name}.snp") into (ch_common_vars_snp, ch_common_vars_snp_for_1240k )
-  path("common_vars_m${params.four_mN}_m2${params.four_mN2}_chr${chrom_name}.ind") into (ch_common_vars_ind, ch_common_vars_ind_for_1240k )
-  path("variant_counts.m${params.four_mN}_m2${params.four_mN2}_chr${chrom_name}.txt") 
+  path("all_vars_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.geno") into ch_all_vars_geno
+  path("all_vars_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.snp") into ch_all_vars_snp
+  path("all_vars_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.ind") into ch_all_vars_ind
+  path("common_vars_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.geno") into (ch_common_vars_geno, ch_common_vars_geno_for_1240k )
+  path("common_vars_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.snp") into (ch_common_vars_snp, ch_common_vars_snp_for_1240k )
+  path("common_vars_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.ind") into (ch_common_vars_ind, ch_common_vars_ind_for_1240k )
+  path("variant_counts.m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.txt") 
   
   script:
   """
-  ${baseDir}/chained_simulation.py -c ${params.chrom_length} -n ${chrom_name} -s ${params.n_ind_per_pop} -m ${params.four_mN} -m2 ${params.four_mN2}#-o /projects1/MICROSCOPE/rarevar_sim_study/data/
-  ${baseDir}/add_ref_and_sort_eigenstrat.sh ${chrom_name} ${params.four_mN}_m${params.four_mN2} .
+  ${baseDir}/chained_simulation.py -c ${params.chrom_length} -n ${chrom_name} -s ${params.n_ind_per_pop} -m ${params.four_mN} -m2 ${params.four_mN2}
+  ${baseDir}/add_ref_and_sort_eigenstrat.sh ${chrom_name} ${params.four_mN}_M${params.four_mN2} .
   """
 }
 
 process make_1240k{
-  tag "n${params.n_ind_per_pop}_m${params.four_mN}_m2${params.four_mN2}_l${params.chrom_length}"
+  tag "n${params.n_ind_per_pop}_m${params.four_mN}_M${params.four_mN2}_l${params.chrom_length}"
   publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}_${params.four_mN2}", mode: 'copy'
   memory '1GB'
   executor 'local'
@@ -89,8 +89,8 @@ process make_1240k{
   """
   ## First concatenate the snps and genos by chromosome
   for chrom_name in {1..20}; do
-    cat common_vars_m${params.four_mN}_m2${params.four_mN2}_chr\${chrom_name}.geno  >> concat_genos
-    cat common_vars_m${params.four_mN}_m2${params.four_mN2}_chr\${chrom_name}.snp  >> concat_snps
+    cat common_vars_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.geno  >> concat_genos
+    cat common_vars_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.snp  >> concat_snps
   done
   
   ## Then paste side by side, use shuf to randomly subsample 1200K sites, sort by original line numbers, and remove leading spaces (added by cat -n)
@@ -106,7 +106,7 @@ process make_1240k{
 }
 
 process merge_chroms_common_vars {
-  tag "n${params.n_ind_per_pop}_m${params.four_mN}_m2${params.four_mN2}_l${params.chrom_length}"
+  tag "n${params.n_ind_per_pop}_m${params.four_mN}_M${params.four_mN2}_l${params.chrom_length}"
   publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}_${params.four_mN2}/", mode: 'copy'
   memory '50MB'
   cpus 1
@@ -124,8 +124,8 @@ process merge_chroms_common_vars {
   """
   ## First concatenate the snps and genos by chromosome
   for chrom_name in {1..20}; do
-    cat common_vars_m${params.four_mN}_m2${params.four_mN2}_chr\${chrom_name}.geno  >> common_vars.geno
-    cat common_vars_m${params.four_mN}_m2${params.four_mN2}_chr\${chrom_name}.snp  >> common_vars.snp
+    cat common_vars_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.geno  >> common_vars.geno
+    cat common_vars_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.snp  >> common_vars.snp
   done
 
   ## Copy the original ind files 
@@ -135,7 +135,7 @@ process merge_chroms_common_vars {
 
 
 process merge_chroms_all_vars {
-  tag "n${params.n_ind_per_pop}_m${params.four_mN}_m2${params.four_mN2}_l${params.chrom_length}"
+  tag "n${params.n_ind_per_pop}_m${params.four_mN}_M${params.four_mN2}_l${params.chrom_length}"
   publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}_${params.four_mN2}/", mode: 'copy'
   memory '50MB'
   cpus 1
@@ -153,8 +153,8 @@ process merge_chroms_all_vars {
   """
   ## First concatenate the snps and genos by chromosome
   for chrom_name in {1..20}; do
-    cat all_vars_m${params.four_mN}_m2${params.four_mN2}_chr\${chrom_name}.geno  >> all_vars.geno
-    cat all_vars_m${params.four_mN}_m2${params.four_mN2}_chr\${chrom_name}.snp  >> all_vars.snp
+    cat all_vars_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.geno  >> all_vars.geno
+    cat all_vars_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.snp  >> all_vars.snp
   done
 
   ## Copy the original ind files 
@@ -167,7 +167,7 @@ ch_datasets=ch_all_vars_datasets
     .dump(tag:"datasets")
 
 process create_poseidon_packages {
-  tag "${variant_set}_n${params.n_ind_per_pop}_m${params.four_mN}_m2${params.four_mN2}_l${params.chrom_length}"
+  tag "${variant_set}_n${params.n_ind_per_pop}_m${params.four_mN}_M${params.four_mN2}_l${params.chrom_length}"
   publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}_${params.four_mN2}/poseidon", mode: 'copy'
   memory '50MB'
   cpus 1
