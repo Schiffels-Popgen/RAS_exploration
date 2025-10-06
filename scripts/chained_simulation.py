@@ -192,9 +192,9 @@ rare_positions = all_positions[rare_var_filter]
 
 ## The first variant count printing will overewrite an existing file, if one exists.
 print ('{:<10}'.format(all_vars.shape[0]), "total variants", sep="\t", 
-       file=open(outdir+"variant_counts.t{}_m{}_M{}_chr{}.txt".format(t_m_change, four_mN, four_mN_2, chrom_name),'w'))
+       file=open(outdir+"variant_counts.m{}_M{}_chr{}.txt".format(four_mN, four_mN_2, chrom_name),'w'))
 
-with open(outdir+"variant_counts.t{}_m{}_M{}_chr{}.txt".format(t_m_change, four_mN, four_mN_2, chrom_name),'a') as f:
+with open(outdir+"variant_counts.m{}_M{}_chr{}.txt".format(four_mN, four_mN_2, chrom_name),'a') as f:
     print ('{:<10}'.format(common_vars.shape[0]), "common variants", sep="\t", file=f)
     print ('{:<10}'.format(rare_vars.shape[0]), "rare variants", sep="\t", file=f)
 ## Twelve-forty variants will need to be generated after all chromosomes of the common variants are concatenated. (should be ok for runtime since the size of these has a maximum value.)
@@ -207,16 +207,16 @@ for variant_set_name in ["all_vars", "common_vars"]: ## Twelve_forty will be mad
     variant_set_genos=abs(eval(variant_set_name)-2) ## Eigenstrat counts Ref (i.e. ancestral) alleles, so the counting needs to be flipped.
     variant_set_positions=eval(variant_set_name.replace("vars","positions"))
     ## Export simulated eigenstrat geno file for testing with qp3Pop
-    np.savetxt(outdir+variant_set_name+"_t{}_m{}_M{}_chr{}.geno".format(t_m_change, four_mN, four_mN_2, chrom_name), variant_set_genos, delimiter='', fmt="%d")
+    np.savetxt(outdir+variant_set_name+"_m{}_M{}_chr{}.geno".format(four_mN, four_mN_2, chrom_name), variant_set_genos, delimiter='', fmt="%d")
 
     ## Export .snp file to go with it.
     #### Resulting snp file is unsorted, so it needs sorting within bash to function.
-    with open(outdir+variant_set_name+"_t{}_m{}_M{}_chr{}.snp".format(t_m_change, four_mN, four_mN_2, chrom_name), 'w') as f:
+    with open(outdir+variant_set_name+"_m{}_M{}_chr{}.snp".format(four_mN, four_mN_2, chrom_name), 'w') as f:
         for pos in variant_set_positions:
             print("{}_{}".format(chrom_name, round_up(pos)), str(chrom_name), "{:.5f}".format(pos/chrom_length), round_up(pos), "A", "G", sep="\t", file=f)
 
     ## Export .ind file
-    with open(outdir+variant_set_name+"_t{}_m{}_M{}_chr{}.ind".format(t_m_change, four_mN, four_mN_2, chrom_name), "w") as f: 
+    with open(outdir+variant_set_name+"_m{}_M{}_chr{}.ind".format(four_mN, four_mN_2, chrom_name), "w") as f: 
         ## pop defined as msprime populations from 0 to 2x#inds (so the entire list since individuals are diploid), 
         ## but considering every second population in the list, since two lineages are merged to form an individual.
         for ind,pop in enumerate(trees.tables.nodes.population[0:sum(sample_sizes)*2:2]):
@@ -224,8 +224,8 @@ for variant_set_name in ["all_vars", "common_vars"]: ## Twelve_forty will be mad
 
 ## Create a freqsum file out of the rare variants
 #### Ind "Ref" is created with all genotypes being ancestral ("0")
-freqsum_output=outdir+"/all_vars_t{}_m{}_M{}_chr{}.freqsum".format(t_m_change, four_mN, four_mN_2, chrom_name)
-# freqsum_output=outdir+"/rare_vars_t{}_m{}_M{}_chr{}.freqsum".format(t_m_change, four_mN, four_mN_2, chrom_name)
+freqsum_output=outdir+"/all_vars_m{}_M{}_chr{}.freqsum".format(four_mN, four_mN_2, chrom_name)
+# freqsum_output=outdir+"/rare_vars_m{}_M{}_chr{}.freqsum".format(four_mN, four_mN_2, chrom_name)
 with open(freqsum_output, 'w') as f:
     print ("#CHROM","POS","REF","ALT",*["ind"+str(x)+"(2)" for x in range(num_inds)],"Ref(2)", sep="\t", file=f)
     for pos,genos in zip(all_positions, all_vars):
