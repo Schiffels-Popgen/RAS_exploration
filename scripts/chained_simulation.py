@@ -9,8 +9,9 @@ def pop_model_chained(
     migration_matrix1=None,
     migration_matrix2=None,
     Ne=20000,
+    time_of_m_change=None,
     ):
-        time_of_m_change=1500/2*Ne
+        ## TODO Swap order of simulations since this is BACKWARD in time
         ## Matrix of 9 sub-populations
         population_configurations = [
             msprime.PopulationConfiguration(initial_size=Ne, sample_size=2*sample_sizes[i]) for i in range(len(sample_sizes))
@@ -19,6 +20,7 @@ def pop_model_chained(
             msprime.PopulationConfiguration(initial_size=Ne) for i in range(len(sample_sizes))
         ]
 
+        ## Simulation is backwards in time, so the first part of the sim is the "shallow" ancestors, and the second part is the more distant ancestors.
         part1_replicates = msprime.simulate(Ne = Ne,
             population_configurations = population_configurations,
             migration_matrix = migration_matrix1,
@@ -28,10 +30,10 @@ def pop_model_chained(
             recombination_rate=recombination_rate, random_seed=chrom_name)
         
         replicates = msprime.simulate(Ne = Ne,
-            from_ts=part1_replicates,
-            population_configurations = population_configurations2,
-            migration_matrix = migration_matrix2,
+            from_ts=part1_replicates, ## Use the tree sequence from the first part of the simulation as the starting point for this second part.
             # mutation_rate = mutation_rate,
+            population_configurations = population_configurations2, ## Sample sizes are taken from the first part.
+            migration_matrix = migration_matrix2,
             length = length,
             recombination_rate=recombination_rate, random_seed=chrom_name)
         return(replicates)
@@ -54,6 +56,7 @@ parser.add_argument("-n", type = int, metavar = "chrom_name", required = False, 
 parser.add_argument("-s", type = int, metavar = "sample_size", required = False, default=20, help = "The number of samples in each of the four sub-populations.")
 parser.add_argument("-m", type = float, metavar = "four_mN", required = False, default=1.0, help = "The scaled per-generation migration rate for the first part of the simulation (t=0 to t=1500/2*Ne).")
 parser.add_argument("-m2", type = float, metavar = "four_mN_2", required = False, default=1.0, help = "The scaled per-generation migration rate for the second part of the simulation (t=1500/2*Ne to end).")
+parser.add_argument("-t", type = int, metavar = "t_m_change", required = False, default=1, help = "The time (in generations) at which the migration rate changes from four_mN to four_mN_2. Default is 1.")
 # parser.add_argument("-o", type = str, metavar = "out_dir", required = False, default="/projects1/MICROSCOPE/rarevar_sim_study/data", help = "The desired output directory within which the freqsum- and eigenstrat-formatted variants will be saved.")
 args = parser.parse_args()
 
@@ -63,6 +66,7 @@ four_mN_2=args.m2
 sample_sizes=[args.s for _ in range(9)] ## Equal sample sizes for each of the populations.
 chrom_name=args.n
 chrom_length=args.c
+t_m_change=args.t
 
 # outdir=out_base_dir+"/{}/{}/".format(np.format_float_scientific(chrom_length, exp_digits=1, trim='-'), four_mN)
 outdir='./'
@@ -118,6 +122,8 @@ trees=pop_model_chained(
                 chrom_name=chrom_name,
                 migration_matrix1=migration_matrix1,
                 migration_matrix2=migration_matrix2,
+                Ne=Ne,
+                time_of_m_change=t_m_change
                 )
 
 ## Extract lineage genotypes from the simulated tree
