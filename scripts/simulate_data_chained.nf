@@ -186,8 +186,9 @@ process create_poseidon_packages {
 
   script:
   """
+  ## DEV NOTE: Using `CONDA_PREFIX` here because I have a local install of trident that supercedes conda-installed trident. Other users can probably change this to just `trident` if they are not using conda.
   ## trident creates the package within the work directory, and nextflow is responsible for putting it in the data dir.
-  ${params.poseidon_exec_dir}/trident init --inFormat EIGENSTRAT \
+  \${CONDA_PREFIX}/bin/trident init --inFormat EIGENSTRAT \
       --snpSet Other \
       --genoFile ${variant_set}.geno \
       --snpFile ${variant_set}.snp \
@@ -196,7 +197,7 @@ process create_poseidon_packages {
       -n ${variant_set}
   
   ## Convert to plink format for faster computation with xerxes.
-  ${params.poseidon_exec_dir}/trident genoconvert \
+  \${CONDA_PREFIX}/bin/trident genoconvert \
       --outFormat PLINK \
       -d .
   """
