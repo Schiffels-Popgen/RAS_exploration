@@ -11,7 +11,6 @@ def pop_model_chained(
     Ne=20000,
     time_of_m_change=None,
     ):
-        ## TODO Swap order of simulations since this is BACKWARD in time
         ## Matrix of 9 sub-populations
         population_configurations = [
             msprime.PopulationConfiguration(initial_size=Ne, sample_size=2*sample_sizes[i]) for i in range(len(sample_sizes))
