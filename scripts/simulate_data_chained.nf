@@ -53,7 +53,7 @@ println ""
 process msprime{
   
   tag "n${params.n_ind_per_pop}_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}_l${params.chrom_length}"
-  // publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}_${params.four_mN2}", mode: 'copy'
+  // publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/t${params.t_m_change}/${params.four_mN}_${params.four_mN2}", mode: 'copy'
   memory '8GB'
   // executor 'local'
 
@@ -78,7 +78,7 @@ process msprime{
 
 process make_1240k{
   tag "n${params.n_ind_per_pop}_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_l${params.chrom_length}"
-  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}_${params.four_mN2}", mode: 'copy'
+  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/t${params.t_m_change}/${params.four_mN}_${params.four_mN2}", mode: 'copy'
   memory '1GB'
   executor 'local'
 
@@ -112,7 +112,7 @@ process make_1240k{
 
 process merge_chroms_common_vars {
   tag "n${params.n_ind_per_pop}_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_l${params.chrom_length}"
-  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}_${params.four_mN2}/", mode: 'copy'
+  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/t${params.t_m_change}/${params.four_mN}_${params.four_mN2}/", mode: 'copy'
   memory '50MB'
   cpus 1
   executor 'local'
@@ -141,7 +141,7 @@ process merge_chroms_common_vars {
 
 process merge_chroms_all_vars {
   tag "n${params.n_ind_per_pop}_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_l${params.chrom_length}"
-  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}_${params.four_mN2}/", mode: 'copy'
+  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/t${params.t_m_change}/${params.four_mN}_${params.four_mN2}/", mode: 'copy'
   memory '50MB'
   cpus 1
   executor 'local'
@@ -173,7 +173,7 @@ ch_datasets=ch_all_vars_datasets
 
 process create_poseidon_packages {
   tag "${variant_set}_n${params.n_ind_per_pop}_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_l${params.chrom_length}"
-  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/${params.four_mN}_${params.four_mN2}/poseidon", mode: 'copy'
+  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/t${params.t_m_change}/${params.four_mN}_${params.four_mN2}/poseidon", mode: 'copy'
   memory '50MB'
   cpus 1
   executor 'local'
