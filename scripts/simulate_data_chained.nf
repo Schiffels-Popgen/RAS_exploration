@@ -61,12 +61,12 @@ process msprime{
   val chrom_name from Channel.of(1..20)
   
   output:
-  path("all_vars_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.geno") into ch_all_vars_geno
-  path("all_vars_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.snp") into ch_all_vars_snp
-  path("all_vars_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.ind") into ch_all_vars_ind
-  path("common_vars_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.geno") into (ch_common_vars_geno, ch_common_vars_geno_for_1240k )
-  path("common_vars_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.snp") into (ch_common_vars_snp, ch_common_vars_snp_for_1240k )
-  path("common_vars_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.ind") into (ch_common_vars_ind, ch_common_vars_ind_for_1240k )
+  path("all_varsm${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.geno") into ch_all_vars_geno
+  path("all_varsm${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.snp") into ch_all_vars_snp
+  path("all_varsm${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.ind") into ch_all_vars_ind
+  path("common_varsm${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.geno") into (ch_common_vars_geno, ch_common_vars_geno_for_1240k )
+  path("common_varsm${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.snp") into (ch_common_vars_snp, ch_common_vars_snp_for_1240k )
+  path("common_varsm${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.ind") into (ch_common_vars_ind, ch_common_vars_ind_for_1240k )
   path("variant_counts.m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.txt") 
   
   script:
@@ -94,8 +94,8 @@ process make_1240k{
   """
   ## First concatenate the snps and genos by chromosome
   for chrom_name in {1..20}; do
-    cat common_vars_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.geno  >> concat_genos
-    cat common_vars_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.snp  >> concat_snps
+    cat common_varsm${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.geno  >> concat_genos
+    cat common_varsm${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.snp  >> concat_snps
   done
   
   ## Then paste side by side, use shuf to randomly subsample 1200K sites, sort by original line numbers, and remove leading spaces (added by cat -n)
@@ -129,8 +129,8 @@ process merge_chroms_common_vars {
   """
   ## First concatenate the snps and genos by chromosome
   for chrom_name in {1..20}; do
-    cat common_vars_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.geno  >> common_vars.geno
-    cat common_vars_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.snp  >> common_vars.snp
+    cat common_varsm${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.geno  >> common_vars.geno
+    cat common_varsm${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.snp  >> common_vars.snp
   done
 
   ## Copy the original ind files 
@@ -158,8 +158,8 @@ process merge_chroms_all_vars {
   """
   ## First concatenate the snps and genos by chromosome
   for chrom_name in {1..20}; do
-    cat all_vars_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.geno  >> all_vars.geno
-    cat all_vars_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.snp  >> all_vars.snp
+    cat all_varsm${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.geno  >> all_vars.geno
+    cat all_varsm${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.snp  >> all_vars.snp
   done
 
   ## Copy the original ind files 
