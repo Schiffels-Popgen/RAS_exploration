@@ -19,7 +19,7 @@ def helpMessage() {
 
       --four_mN [float]       The scaled per-generation migration rate for the proximal part of the simulation (t=0 to t=t_m_change).
 
-      --four_mN2 [float]      The scaled per-generation migration rate for the distal part of the simulation (t=t_m_change to end).
+      --four_mN_2 [float]      The scaled per-generation migration rate for the distal part of the simulation (t=t_m_change to end).
 
       --chrom_length [float]  The length of the simulated chromosomes.
 
@@ -52,8 +52,8 @@ println ""
 
 process msprime{
   
-  tag "n${params.n_ind_per_pop}_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}_l${params.chrom_length}"
-  // publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/t${params.t_m_change}/${params.four_mN}_${params.four_mN2}", mode: 'copy'
+  tag "n${params.n_ind_per_pop}_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN_2}_chr${chrom_name}_l${params.chrom_length}"
+  // publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/t${params.t_m_change}/${params.four_mN}_${params.four_mN_2}", mode: 'copy'
   memory '8GB'
   // executor 'local'
 
@@ -61,24 +61,24 @@ process msprime{
   val chrom_name from Channel.of(1..20)
   
   output:
-  path("all_vars_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.geno") into ch_all_vars_geno
-  path("all_vars_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.snp") into ch_all_vars_snp
-  path("all_vars_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.ind") into ch_all_vars_ind
-  path("common_vars_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.geno") into (ch_common_vars_geno, ch_common_vars_geno_for_1240k )
-  path("common_vars_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.snp") into (ch_common_vars_snp, ch_common_vars_snp_for_1240k )
-  path("common_vars_m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.ind") into (ch_common_vars_ind, ch_common_vars_ind_for_1240k )
-  path("variant_counts.m${params.four_mN}_M${params.four_mN2}_chr${chrom_name}.txt") 
+  path("all_vars_m${params.four_mN}_M${params.four_mN_2}_chr${chrom_name}.geno") into ch_all_vars_geno
+  path("all_vars_m${params.four_mN}_M${params.four_mN_2}_chr${chrom_name}.snp") into ch_all_vars_snp
+  path("all_vars_m${params.four_mN}_M${params.four_mN_2}_chr${chrom_name}.ind") into ch_all_vars_ind
+  path("common_vars_m${params.four_mN}_M${params.four_mN_2}_chr${chrom_name}.geno") into (ch_common_vars_geno, ch_common_vars_geno_for_1240k )
+  path("common_vars_m${params.four_mN}_M${params.four_mN_2}_chr${chrom_name}.snp") into (ch_common_vars_snp, ch_common_vars_snp_for_1240k )
+  path("common_vars_m${params.four_mN}_M${params.four_mN_2}_chr${chrom_name}.ind") into (ch_common_vars_ind, ch_common_vars_ind_for_1240k )
+  path("variant_counts.m${params.four_mN}_M${params.four_mN_2}_chr${chrom_name}.txt") 
   
   script:
   """
-  ${baseDir}/chained_simulation.py -c ${params.chrom_length} -n ${chrom_name} -s ${params.n_ind_per_pop} -t ${params.t_m_change} -m ${params.four_mN} -m2 ${params.four_mN2}
-  ${baseDir}/add_ref_and_sort_eigenstrat.sh ${chrom_name} ${params.four_mN}_M${params.four_mN2} .
+  ${baseDir}/chained_simulation.py -c ${params.chrom_length} -n ${chrom_name} -s ${params.n_ind_per_pop} -t ${params.t_m_change} -m ${params.four_mN} -m2 ${params.four_mN_2}
+  ${baseDir}/add_ref_and_sort_eigenstrat.sh ${chrom_name} ${params.four_mN}_M${params.four_mN_2} .
   """
 }
 
 process make_1240k{
-  tag "n${params.n_ind_per_pop}_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_l${params.chrom_length}"
-  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/t${params.t_m_change}/${params.four_mN}_${params.four_mN2}", mode: 'copy'
+  tag "n${params.n_ind_per_pop}_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN_2}_l${params.chrom_length}"
+  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/t${params.t_m_change}/${params.four_mN}_${params.four_mN_2}", mode: 'copy'
   memory '1GB'
   executor 'local'
 
@@ -94,8 +94,8 @@ process make_1240k{
   """
   ## First concatenate the snps and genos by chromosome
   for chrom_name in {1..20}; do
-    cat common_vars_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.geno  >> concat_genos
-    cat common_vars_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.snp  >> concat_snps
+    cat common_vars_m${params.four_mN}_M${params.four_mN_2}_chr\${chrom_name}.geno  >> concat_genos
+    cat common_vars_m${params.four_mN}_M${params.four_mN_2}_chr\${chrom_name}.snp  >> concat_snps
   done
   
   ## Then paste side by side, use shuf to randomly subsample 1200K sites, sort by original line numbers, and remove leading spaces (added by cat -n)
@@ -111,8 +111,8 @@ process make_1240k{
 }
 
 process merge_chroms_common_vars {
-  tag "n${params.n_ind_per_pop}_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_l${params.chrom_length}"
-  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/t${params.t_m_change}/${params.four_mN}_${params.four_mN2}/", mode: 'copy'
+  tag "n${params.n_ind_per_pop}_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN_2}_l${params.chrom_length}"
+  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/t${params.t_m_change}/${params.four_mN}_${params.four_mN_2}/", mode: 'copy'
   memory '50MB'
   cpus 1
   executor 'local'
@@ -129,8 +129,8 @@ process merge_chroms_common_vars {
   """
   ## First concatenate the snps and genos by chromosome
   for chrom_name in {1..20}; do
-    cat common_vars_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.geno  >> common_vars.geno
-    cat common_vars_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.snp  >> common_vars.snp
+    cat common_vars_m${params.four_mN}_M${params.four_mN_2}_chr\${chrom_name}.geno  >> common_vars.geno
+    cat common_vars_m${params.four_mN}_M${params.four_mN_2}_chr\${chrom_name}.snp  >> common_vars.snp
   done
 
   ## Copy the original ind files 
@@ -140,8 +140,8 @@ process merge_chroms_common_vars {
 
 
 process merge_chroms_all_vars {
-  tag "n${params.n_ind_per_pop}_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_l${params.chrom_length}"
-  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/t${params.t_m_change}/${params.four_mN}_${params.four_mN2}/", mode: 'copy'
+  tag "n${params.n_ind_per_pop}_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN_2}_l${params.chrom_length}"
+  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/t${params.t_m_change}/${params.four_mN}_${params.four_mN_2}/", mode: 'copy'
   memory '50MB'
   cpus 1
   executor 'local'
@@ -158,8 +158,8 @@ process merge_chroms_all_vars {
   """
   ## First concatenate the snps and genos by chromosome
   for chrom_name in {1..20}; do
-    cat all_vars_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.geno  >> all_vars.geno
-    cat all_vars_m${params.four_mN}_M${params.four_mN2}_chr\${chrom_name}.snp  >> all_vars.snp
+    cat all_vars_m${params.four_mN}_M${params.four_mN_2}_chr\${chrom_name}.geno  >> all_vars.geno
+    cat all_vars_m${params.four_mN}_M${params.four_mN_2}_chr\${chrom_name}.snp  >> all_vars.snp
   done
 
   ## Copy the original ind files 
@@ -172,8 +172,8 @@ ch_datasets=ch_all_vars_datasets
     .dump(tag:"datasets")
 
 process create_poseidon_packages {
-  tag "${variant_set}_n${params.n_ind_per_pop}_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN2}_l${params.chrom_length}"
-  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/t${params.t_m_change}/${params.four_mN}_${params.four_mN2}/poseidon", mode: 'copy'
+  tag "${variant_set}_n${params.n_ind_per_pop}_t${params.t_m_change}_m${params.four_mN}_M${params.four_mN_2}_l${params.chrom_length}"
+  publishDir "${baseDir}/../data/n${params.n_ind_per_pop}/${params.chrom_length}/t${params.t_m_change}/${params.four_mN}_${params.four_mN_2}/poseidon", mode: 'copy'
   memory '50MB'
   cpus 1
   executor 'local'
